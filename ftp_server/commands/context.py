@@ -17,3 +17,11 @@ class Context:
         self.current_path= Path(current_path)
         self.HOST = host
         self.PORT = port
+        self._is_die_requested = False
+
+    def die(self):
+        self._is_die_requested = True 
+    
+    @property
+    def is_die_requested(self):
+        return self._is_die_requested

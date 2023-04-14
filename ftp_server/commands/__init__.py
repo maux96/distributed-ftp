@@ -9,6 +9,7 @@ AVAILABLE_COMMANDS: list[type[BaseCommand]]= [
    basic_commands.TYPECommand,
    basic_commands.USERCommand,
    basic_commands.PWDCommand,
+   basic_commands.QUITCommand,
 
    data_openers_commands.PASVCommand,
 

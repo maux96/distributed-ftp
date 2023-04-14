@@ -15,30 +15,37 @@ START_PATH = '/home/maux96/Images'
 
 
 def start_connection(conn: socket.socket, addrs):
-    send_control_response(conn, 220, WELCOME_MESSAGE)
+    try:
+        send_control_response(conn, 220, WELCOME_MESSAGE)
 
-    current_context = Context(
-        control_connection=conn,
-        data_connection=socket.socket(-1),
-        current_path=START_PATH,
-        host=HOST,
-        port=PORT
-    )
+        current_context = Context(
+            control_connection=conn,
+            data_connection=socket.socket(-1),
+            current_path=START_PATH,
+            host=HOST,
+            port=PORT
+        )
 
-    while message:=conn.recv(2048):
-        args=utils.prepare_command_args(message)
-        command_type= args[0]
-        exist_command=False
-        for command in AVAILABLE_COMMANDS:
-            if command.name() == command_type:
-                exist_command=True
-                command._resolve(current_context,args[1:]) 
-                break
-        if not exist_command:
-            send_control_response(conn, 502, 'Command not implemented!')
-        pass
+        while not current_context.is_die_requested and\
+            (message:=conn.recv(2048)):
 
-    conn.close()
+            print(addrs,">>",message)
+
+            args=utils.prepare_command_args(message)
+            command_type= args[0]
+            exist_command=False
+            for command in AVAILABLE_COMMANDS:
+                if command.name() == command_type:
+                    exist_command=True
+                    command._resolve(current_context,args[1:]) 
+                    break
+            if not exist_command:
+                send_control_response(conn, 502, 'Command not implemented!')
+            pass
+
+    finally:
+        conn.close()
+        print('Data Connection Closed:', addrs)
 
 def main():
     print('Starting server...', end='')

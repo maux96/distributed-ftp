@@ -35,3 +35,9 @@ class NOOPCommand(BaseCommand):
     def _resolve(cls,context: Context, args: list[str]):
         send_control_response(context.control_connection, 200, 'OK!')
         pass
+
+class QUITCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        send_control_response(context.control_connection, 221, 'Good Bye :)')
+        context.die()
