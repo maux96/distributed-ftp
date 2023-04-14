@@ -1,0 +1,36 @@
+
+from .base_command import BaseCommand
+from .response import send_control_response
+from .context import Context
+
+
+
+class MODECommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        send_control_response(context.control_connection, 200, 'Stream')
+class STRUCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        send_control_response(context.control_connection, 200, 'File')
+        pass
+class TYPECommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        send_control_response(context.control_connection,200,'ASCII Non-print')
+class USERCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        send_control_response(context.control_connection, 230, 'Usuario Anonimo')
+
+
+class PWDCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        send_control_response(context.control_connection, 257, context.current_path)
+
+class NOOPCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        send_control_response(context.control_connection, 200, 'OK!')
+        pass
