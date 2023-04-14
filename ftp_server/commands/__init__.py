@@ -14,6 +14,8 @@ AVAILABLE_COMMANDS: list[type[BaseCommand]]= [
    data_openers_commands.PASVCommand,
 
    data_commands.LISTCommand,
+   data_commands.RETRCommand,
+   data_commands.STORCommand,
 
    navigation_commands.CWDCommand,
    navigation_commands.CDUPCommand,

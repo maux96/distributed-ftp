@@ -29,7 +29,7 @@ def start_connection(conn: socket.socket, addrs):
         while not current_context.is_die_requested and\
             (message:=conn.recv(2048)):
 
-            print(addrs,">>",message)
+            #print(addrs,">>",message)
 
             args=utils.prepare_command_args(message)
             command_type= args[0]
