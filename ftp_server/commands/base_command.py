@@ -1,8 +1,7 @@
-import abc
 from .context import Context
 
 
-class BaseCommand(abc.ABC):
+class BaseCommand:
 
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):

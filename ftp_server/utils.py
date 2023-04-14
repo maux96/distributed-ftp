@@ -1,3 +1,6 @@
+import os
+import pathlib
+
 def transform_string_into_addrs(repr: str):
     tokens=repr.split(',')
     return (
@@ -16,3 +19,16 @@ def prepare_command_args(line: bytes, encoding='ascii') :
     tokens = val.split()
     tokens[0] = tokens[0].upper()
     return tokens 
+
+def verify_and_get_valid_path(actual_path: pathlib.Path | str,
+                              route: pathlib.Path | str,
+                              is_directory: bool = True):
+
+    f =  os.path.isdir if is_directory else os.path.isfile 
+
+    actual_path = pathlib.Path(actual_path)
+    route = pathlib.Path(route)
+
+    return (f(route), route)\
+                if route.is_absolute()\
+                else (f(actual_path / route), actual_path/route)

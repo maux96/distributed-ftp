@@ -17,8 +17,13 @@ START_PATH = '/home/maux96/Images'
 def start_connection(conn: socket.socket, addrs):
     send_control_response(conn, 220, WELCOME_MESSAGE)
 
-    current_path =  START_PATH 
-    data_conn = socket.socket(-1)
+    current_context = Context(
+        control_connection=conn,
+        data_connection=socket.socket(-1),
+        current_path=START_PATH,
+        host=HOST,
+        port=PORT
+    )
 
     while message:=conn.recv(2048):
         args=utils.prepare_command_args(message)
@@ -27,13 +32,7 @@ def start_connection(conn: socket.socket, addrs):
         for command in AVAILABLE_COMMANDS:
             if command.name() == command_type:
                 exist_command=True
-                command._resolve(
-                    Context(
-                        control_connection=conn,
-                        data_connection=data_conn,
-                        current_path=current_path
-                    )
-                    ,args[1:]) 
+                command._resolve(current_context,args[1:]) 
                 break
         if not exist_command:
             send_control_response(conn, 502, 'Command not implemented!')
