@@ -13,7 +13,7 @@ WELCOME_MESSAGE = "Welcome to our FTP :)"
 START_PATH = './test_storage'
 
 
-def start_connection(conn: socket.socket, addrs):
+def start_connection(conn: socket.socket, addr):
     try:
         send_control_response(conn, 220, WELCOME_MESSAGE)
 
@@ -43,16 +43,18 @@ def start_connection(conn: socket.socket, addrs):
 
     finally:
         conn.close()
+        print('Connection Closed', addr)
 
 def main():
     print('Starting server...', end='')
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         s.listen() 
-
         print('DONE!')
         while True:
             conn, addr = s.accept()
+
+            print('Connected with', addr)
             threading.Thread(target=start_connection,args=(conn, addr)).start()
 
 if __name__ =='__main__':

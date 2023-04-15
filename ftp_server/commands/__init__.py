@@ -12,6 +12,7 @@ AVAILABLE_COMMANDS: list[type[BaseCommand]]= [
    basic_commands.QUITCommand,
 
    data_openers_commands.PASVCommand,
+   data_openers_commands.PORTCommand,
 
    data_commands.LISTCommand,
    data_commands.RETRCommand,

@@ -16,7 +16,7 @@ class PASVCommand(BaseCommand):
         send_control_response(context.control_connection,
                               227,f"Entering Passive Mode ({address})")
 
-        context.data_connection=data_socket
+        context.data_connection=data_socket.accept()[0]
 
 
     @staticmethod
@@ -28,4 +28,14 @@ class PASVCommand(BaseCommand):
         soc.listen() 
         return soc, port
 
-#TODO PORT command
+class PORTCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        data_addr, data_port = utils.transform_string_into_addrs(args[0])
+        data_socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        data_socket.connect((data_addr,data_port))
+        send_control_response(context.control_connection,
+                              200,"Entering in Active Mode")
+
+        context.data_connection=data_socket
+

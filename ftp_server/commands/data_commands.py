@@ -28,7 +28,7 @@ class LISTCommand(BaseCommand):
         context.send_control_response(
             125,'Data connection already open; transfer starting.')
 
-        data_conn, data_addr= context.data_connection.accept()
+        data_conn = context.data_connection
         data_conn.send(cls.list_dir(path ))
 
         data_conn.close()
@@ -56,7 +56,7 @@ class RETRCommand(BaseCommand):
             context.send_control_response(125,
                     'Data connection already open; transfer starting.')
 
-            data_conn, _= context.data_connection.accept()
+            data_conn= context.data_connection
 
             #TODO verificar que no halla errores al crear el archivo
             with open(absolute_file_path, 'rb') as fd:
@@ -87,7 +87,7 @@ class STORCommand(BaseCommand):
             context.send_control_response(125,
                 'Data connection already open; transfer starting.')
 
-            data_conn, data_addr= context.data_connection.accept()
+            data_conn= context.data_connection
             with open(absolute_dir_path/file_name, 'wb') as fd:
                 while chunk:=data_conn.recv(2048):
                     fd.write(chunk)
