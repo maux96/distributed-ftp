@@ -1,6 +1,6 @@
 
 from .base_command import BaseCommand
-from .context import Context
+from ..context import Context
 
 import pathlib
 import subprocess

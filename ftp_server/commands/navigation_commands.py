@@ -1,5 +1,5 @@
 from .base_command import BaseCommand
-from .context import Context
+from ..context import Context
 
 class CWDCommand(BaseCommand):
     @classmethod

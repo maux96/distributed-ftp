@@ -1,7 +1,7 @@
 
 from .base_command import BaseCommand
-from .response import send_control_response
-from .context import Context
+from ..response import send_control_response
+from ..context import Context
 
 
 

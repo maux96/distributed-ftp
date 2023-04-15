@@ -1,4 +1,4 @@
-from .context import Context
+from ..context import Context
 
 
 class BaseCommand:
@@ -6,7 +6,7 @@ class BaseCommand:
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):
        """
-           Asumiendo que se puede mandar el comando, intentar resolverlo         
+            Process the command
        """
 
     @classmethod

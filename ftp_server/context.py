@@ -8,22 +8,20 @@ class Context:
     def __init__(
             self,*,
             control_connection: socket.socket,
-            data_connection: socket.socket,
-            #current_path:Path | str,
             root_path:Path | str,
             host: str,
             port: int
         ) -> None:
 
         self.control_connection = control_connection
-        self.data_connection = data_connection
+        self.data_connection = socket.socket(-1)
         self.client_path= Path('/')
         self.root_path= Path(root_path)
         self.HOST = host
         self.PORT = port
         self._is_die_requested = False
 
-    
+
     @property
     def is_die_requested(self):
         return self._is_die_requested
