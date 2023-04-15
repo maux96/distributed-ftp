@@ -17,6 +17,8 @@ AVAILABLE_COMMANDS: list[type[BaseCommand]]= [
    data_commands.RETRCommand,
    data_commands.STORCommand,
    data_commands.MKDCommand,
+   data_commands.DELECommand,
+   data_commands.RMDCommand,
 
    navigation_commands.CWDCommand,
    navigation_commands.CDUPCommand,

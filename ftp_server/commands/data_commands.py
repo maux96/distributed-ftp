@@ -122,4 +122,34 @@ class MKDCommand(BaseCommand):
 class DELECommand(BaseCommand):
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):
-        raise Exception('Not implemented!')
+        path_name =pathlib.Path(' '.join(args))
+
+        absolute_path = context.verify_and_get_absolute_os_path(path_name, is_dir=False)
+
+        if absolute_path:
+            absolute_path.unlink()
+            context.send_control_response(250,
+                'File removed')
+        else:
+            context.send_control_response(550,
+                'Requested action not taken. File unavailable (e.g., file not found, no access)')
+
+class RMDCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        path_name =pathlib.Path(' '.join(args))
+
+        absolute_path = context.verify_and_get_absolute_os_path(path_name, is_dir=True)
+
+        if absolute_path:
+            try:
+                absolute_path.rmdir()
+                context.send_control_response(250,
+                    'Dir removed.')
+            except: 
+                context.send_control_response(550,
+                    'Dir contains files.')
+        else:
+            context.send_control_response(550,
+                'Requested action not taken.\
+File unavailable (e.g., file not found, no access)')
