@@ -23,7 +23,6 @@ class PASVCommand(BaseCommand):
     def _get_pasive_data_socket(context: Context, port=None):
         if port is None:
             port = random.randint(1500,9000)
-        print(f'opening socket {port} for pasive data connections.')
         soc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         soc.bind((context.HOST, port))
         soc.listen() 

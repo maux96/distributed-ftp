@@ -28,7 +28,7 @@ class PWDCommand(BaseCommand):
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):
         send_control_response(context.control_connection,
-                               257, str(context.current_path))
+                               257, '"'+str(context.client_path)+'"')
 
 class NOOPCommand(BaseCommand):
     @classmethod

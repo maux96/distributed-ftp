@@ -1,8 +1,6 @@
 
 from .base_command import BaseCommand
 from .context import Context
-from .response import send_control_response
-from ..utils import verify_and_get_valid_path
 
 import pathlib
 import subprocess
@@ -11,19 +9,32 @@ import subprocess
 class LISTCommand(BaseCommand):
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):
-        path_ = pathlib.Path(*args) if args else context.current_path 
+        if '-a' in args: 
+            """para un tipo especifico de ftp (no rfc959)"""
+            args.remove('-a')
+
+        if args:
+            path = ' '.join(args)
+            if not context.is_valid_path(path, is_dir=True):
+                context.send_control_response(451,
+                    'Requested action aborted: local error in processing.')
+                return 
+            path = context.get_os_absolute_path(path)
+        else: 
+            path= context.current_absolute_os_path 
+
 
         # TODO verificar que haya conexion de datos...
-        send_control_response(context.control_connection,
-                             125,'Data connection already open; transfer starting.')
+        context.send_control_response(
+            125,'Data connection already open; transfer starting.')
 
         data_conn, data_addr= context.data_connection.accept()
-        data_conn.send(cls.list_dir(path_ ))
+        data_conn.send(cls.list_dir(path ))
 
         data_conn.close()
 
-        send_control_response(context.control_connection,
-                             226,'Closing data connection.')
+        context.send_control_response(
+            226,'Closing data connection.')
 
     @staticmethod
     def list_dir(route):
@@ -36,30 +47,27 @@ class LISTCommand(BaseCommand):
 class RETRCommand(BaseCommand):
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):
-        path_name =' '.join(args) 
-        is_valid,file_abs_route = verify_and_get_valid_path(
-            context.current_path,
-            path_name,
-            is_directory=False)
+        client_path =' '.join(args) 
 
-        if is_valid:
+        if absolute_file_path:=context.verify_and_get_absolute_os_path(client_path,
+                                                                       is_dir=False) :
             # TODO verificar que haya conexion de datos como pasv
-            send_control_response(context.control_connection,
-                             125,'Data connection already open; transfer starting.')
+
+            context.send_control_response(125,
+                    'Data connection already open; transfer starting.')
 
             data_conn, _= context.data_connection.accept()
 
             #TODO verificar que no halla errores al crear el archivo
-            with open(file_abs_route, 'rb') as fd:
+            with open(absolute_file_path, 'rb') as fd:
                 total_send=data_conn.sendfile(fd)
-                print('Total Send:',total_send)
             data_conn.close() 
 
-            send_control_response(context.control_connection,
-                             226,'Closing data connection.')
+            context.send_control_response(226,
+                    f'Colosing data connection. Sended {total_send}')
         else:
-            send_control_response(context.control_connection,
-                             501,'Invalid Directory.')
+            context.send_control_response(501,
+                    'Invalid Directory.')
 
 
 class STORCommand(BaseCommand):
@@ -70,31 +78,48 @@ class STORCommand(BaseCommand):
         file_name = path_name.name
                     
 
-        is_valid,file_abs_route = verify_and_get_valid_path(
-            context.current_path,
-            parent_dir,
-            is_directory=True)
+
         #TODO verificar ademas si el archivo file_name existe, de ser asi responder
         # con el codigo asociado
 
-        if is_valid:
-            send_control_response(context.control_connection,
-                             125,'Data connection already open; transfer starting.')
-
+        if absolute_dir_path:=context.verify_and_get_absolute_os_path(parent_dir,
+                                                                       is_dir=True) :
+            context.send_control_response(125,
+                'Data connection already open; transfer starting.')
 
             data_conn, data_addr= context.data_connection.accept()
-            with open(file_abs_route/file_name, 'wb') as fd:
+            with open(absolute_dir_path/file_name, 'wb') as fd:
                 while chunk:=data_conn.recv(2048):
                     fd.write(chunk)
 
             data_conn.close() 
-            
-            send_control_response(context.control_connection,
-                             226,'Closing data connection.')
+            context.send_control_response(226,
+                'Closing data connection.')
 
 
         else:
-            send_control_response(context.control_connection,
-                             501,'Invalid Directory.')
+            context.send_control_response(501,
+                'Invalid Directory.')
 
+class MKDCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        path_name =pathlib.Path(' '.join(args))
+        parent_dir = path_name.parent
+        dir_name = path_name.name   
 
+        parent_dir_abs_route = context.verify_and_get_absolute_os_path(parent_dir)
+        
+        # TODO verificar si existe una carpeta con el mismo nombre
+        if parent_dir_abs_route is not None:
+            (parent_dir_abs_route/dir_name).mkdir()
+            context.send_control_response(257,
+                'Directory Created.')
+        else:
+            context.send_control_response(501,
+                'Invalid Directory.')
+
+class DELECommand(BaseCommand):
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        raise Exception('Not implemented!')

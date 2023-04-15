@@ -11,7 +11,8 @@ HOST='0.0.0.0'
 PORT=7890
 
 WELCOME_MESSAGE = "Welcome to our FTP :)"
-START_PATH = '/home/maux96/Images' 
+#START_PATH = '/home/maux96/Images' 
+START_PATH = './test_storage'
 
 
 def start_connection(conn: socket.socket, addrs):
@@ -21,7 +22,7 @@ def start_connection(conn: socket.socket, addrs):
         current_context = Context(
             control_connection=conn,
             data_connection=socket.socket(-1),
-            current_path=START_PATH,
+            root_path=START_PATH,
             host=HOST,
             port=PORT
         )
@@ -29,10 +30,11 @@ def start_connection(conn: socket.socket, addrs):
         while not current_context.is_die_requested and\
             (message:=conn.recv(2048)):
 
-            #print(addrs,">>",message)
+            #print(addrs,'>   ', message.decode('ascii'))
 
             args=utils.prepare_command_args(message)
             command_type= args[0]
+
             exist_command=False
             for command in AVAILABLE_COMMANDS:
                 if command.name() == command_type:
@@ -56,6 +58,7 @@ def main():
         print('DONE!')
         while True:
             conn, addr = s.accept()
+            print("New Connection:", addr)
 
             threading.Thread(target=start_connection,args=(conn, addr)).start()
 
