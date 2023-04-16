@@ -1,26 +1,38 @@
 from .base_command import BaseCommand
-from . import basic_commands
-from . import data_openers_commands
-from . import data_commands
-from . import navigation_commands 
+from .basic_commands import * 
+from .data_commands import * 
+from .data_openers_commands import * 
+from .navigation_commands import * 
 
-AVAILABLE_COMMANDS: list[type[BaseCommand]]= [
-   basic_commands.NOOPCommand,
-   basic_commands.TYPECommand,
-   basic_commands.USERCommand,
-   basic_commands.PWDCommand,
-   basic_commands.QUITCommand,
+BASICS = [
+   NOOPCommand,
+   TYPECommand,
+   USERCommand,
+   PWDCommand,
+   QUITCommand,
+]
+DATA_OPENERS=[
+   PASVCommand,
+   PORTCommand,
+]
 
-   data_openers_commands.PASVCommand,
-   data_openers_commands.PORTCommand,
+DATA = [
+   LISTCommand,
+   RETRCommand,
+   STORCommand,
+   MKDCommand,
+   DELECommand,
+   RMDCommand,
+]
 
-   data_commands.LISTCommand,
-   data_commands.RETRCommand,
-   data_commands.STORCommand,
-   data_commands.MKDCommand,
-   data_commands.DELECommand,
-   data_commands.RMDCommand,
+NAVIGATION = [
+   CWDCommand,
+   CDUPCommand,
+]
 
-   navigation_commands.CWDCommand,
-   navigation_commands.CDUPCommand,
+ALL = [
+   *BASICS,
+   *DATA_OPENERS,
+   *DATA,
+   *NAVIGATION,
 ]
