@@ -1,8 +1,10 @@
 from ftp_server.server import FTP, FTPConfiguration 
 from ftp_server import commands
+from proxy import Proxy
 
-from os import environ
 import random
+import argparse
+
 
 
 def start_ftp_server(config: FTPConfiguration):
@@ -12,12 +14,38 @@ def start_ftp_server(config: FTPConfiguration):
 
 if __name__ == '__main__':
 
-    ftp_id = environ['ID'] if 'ID' in environ else 'FTP_DEFAULT_ID'
-    start_ftp_server(FTPConfiguration(
-        id=ftp_id,
-        host='0.0.0.0',
-        port= int(environ['PORT']) if 'PORT' in environ else random.randint(5000, 20000),
-        root_path=environ['ROOT_PATH'] if 'ROOT_PATH' in environ else '.',
-        welcome_message=f'Welcome to FTP {ftp_id}!!',
-        commands=commands.ALL
-    ))
+
+    parser = argparse.ArgumentParser(description='FTP Distribuido')
+    parser.add_argument('service',
+                        choices=['ftp', 'proxy', 'analizer'],
+                        help='Tipo de servicio a ejecutar')
+
+    parser.add_argument('--id',default='DEFAULT_ID')
+    parser.add_argument('--host',default='0.0.0.0')
+    parser.add_argument('--port',default=str(random.randint(5000, 20000)))
+    parser.add_argument('--root-dir', default='.')
+    parser.add_argument('--welcome-msg', default='Connection Success!')
+    args = parser.parse_args()
+
+    ID = args.id
+    HOST = args.host 
+    PORT = int(args.port)
+    ROOT_DIR = args.root_dir
+    WELCOME_MSG = args.welcome_msg
+
+    if args.service == 'ftp':
+        ftp_id = ID
+        start_ftp_server(FTPConfiguration(
+            id=ID,
+            host=HOST,
+            port= int(PORT), 
+            root_path=ROOT_DIR,
+            welcome_message=WELCOME_MSG,
+            commands=commands.ALL
+        ))
+
+    elif args.service == 'proxy':
+        Proxy(HOST,PORT).run()
+
+    elif args.service == 'analizer':
+        raise Exception("NOT IMPLEMENTED")
