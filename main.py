@@ -1,10 +1,10 @@
 from ftp_server.server import FTP, FTPConfiguration 
 from ftp_server import commands
 from proxy import Proxy
+import ns_utils
 
 import random
 import argparse
-
 
 
 def start_ftp_server(config: FTPConfiguration):
@@ -33,8 +33,9 @@ if __name__ == '__main__':
     ROOT_DIR = args.root_dir
     WELCOME_MSG = args.welcome_msg
 
+
     if args.service == 'ftp':
-        ftp_id = ID
+        ns_utils.ns_register(ID,HOST,PORT)
         start_ftp_server(FTPConfiguration(
             id=ID,
             host=HOST,
@@ -45,6 +46,8 @@ if __name__ == '__main__':
         ))
 
     elif args.service == 'proxy':
+        ns_utils.ns_register(ID,HOST,PORT)
+        print(f"Server {ID} ejecutandose en {HOST}:{PORT}.")
         Proxy(HOST,PORT).run()
 
     elif args.service == 'analizer':
