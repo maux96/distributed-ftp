@@ -27,7 +27,6 @@ def ns_lookup(name, ns: NameServer | None = None ) -> None | tuple[str, int]:
 def ns_lookup_prefix(prefix, ns: NameServer | None = None ):
     if ns is None:
         ns=Pyro5.api.locate_ns()
-    
     sol = {} 
     for k,v in ns.list(prefix=prefix).items():
         _,addr=v.split('@')
@@ -41,9 +40,4 @@ def ns_remove_name(name , ns: NameServer | None = None ):
 
     return ns.remove(name)
 
-if __name__ == '__main__':
-    ns_register('papu','0.0.0.0',1234)
-    print(ns_lookup('papu'))
-    print(ns_lookup_prefix('pa'))
-
-    #print(ns_remove_name('papu'))
+        

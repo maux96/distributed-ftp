@@ -1,6 +1,7 @@
 from ftp_server.server import FTP, FTPConfiguration 
 from ftp_server import commands
 from proxy import Proxy
+from analizer import Analizer
 import ns_utils
 
 import random
@@ -33,9 +34,8 @@ if __name__ == '__main__':
     ROOT_DIR = args.root_dir
     WELCOME_MSG = args.welcome_msg
 
-
     if args.service == 'ftp':
-        ns_utils.ns_register(ID,HOST,PORT)
+        ns_utils.ns_register(f"ftp_{ID}",HOST,PORT)
         start_ftp_server(FTPConfiguration(
             id=ID,
             host=HOST,
@@ -46,9 +46,10 @@ if __name__ == '__main__':
         ))
 
     elif args.service == 'proxy':
-        ns_utils.ns_register(ID,HOST,PORT)
+        ns_utils.ns_register(f"proxy_{ID}",HOST,PORT)
         print(f"Server {ID} ejecutandose en {HOST}:{PORT}.")
         Proxy(HOST,PORT).run()
 
     elif args.service == 'analizer':
-        raise Exception("NOT IMPLEMENTED")
+        ns_utils.ns_register(f'analizer_{ID}',HOST,PORT)
+        Analizer(HOST,PORT,10).run()
