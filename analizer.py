@@ -1,6 +1,6 @@
 import socket
 import json
-from typing import Literal
+from typing import Literal, Callable
 import threading
 import time
 
@@ -21,15 +21,33 @@ class Analizer:
                                 type: Literal['ftp', 'proxy', 'analizer']
                                 ):
         
-        while True:  
-            print(f"searching for {type}")
+        setattr(self,f'available_{type}',ns_utils.ns_lookup_prefix(type))
 
-            setattr(self,f'available_{type}',ns_utils.ns_lookup_prefix(type))
+    def _refresh_ftp_nodes(self):
+        """
+        Toma todos los servidores ftp en el servidor de nombres y comprueba conectividad
+        ,filtra los validos y los guarda y manda a elminar los invalidos en el ns. 
+        """
+        self._refresh_avalible_nodes('ftp')
+        valid_ftp: dict[str, tuple[str,int]] = {} 
+        for name,ftp_addr in self.available_ftp.items():  
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(5) 
+                    s.connect(ftp_addr)
+                    if s.recv(2048).decode('ascii').split(' ')[0] == '220':
+                        valid_ftp[name] = ftp_addr
+                    s.send(b'QUIT')
+            except (TimeoutError, OSError):
+                ns_utils.ns_remove_name(name)
+                pass
+        print(valid_ftp)
+        self.available_ftp = valid_ftp 
 
-            #TODO verificar si las direcciones son accesibles todavia
+    def refresh_loop(self,func: Callable):
+        while True:
+            func()
             time.sleep(self.refresh_time)
-            
-
     
     def handle_conn(self, conn: socket.socket):
         conn.settimeout(10)
@@ -50,7 +68,8 @@ class Analizer:
 
 
     def run(self):
-        threading.Thread(target=self._refresh_avalible_nodes, args=('ftp',)).start()
+        #threading.Thread(target=self._refresh_ftp_nodes).start()
+        threading.Thread(target=self.refresh_loop,args=(self._refresh_ftp_nodes,)).start()
         
         print('Starting!')
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
