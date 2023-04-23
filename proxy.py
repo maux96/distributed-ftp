@@ -5,6 +5,7 @@ import ns_utils
 import time
 import json
 
+from ftp_server.response import send_control_response
 TIME_OUT = 60 
 
 class Proxy:
@@ -14,23 +15,28 @@ class Proxy:
         self.available_ftps: dict = {}
 
     def get_available_ftp(self):
-        """TODO obtener los servidores FTP disponibles"""
-       # por ahora que el mismo le pregunte al ns
+        """
+        Obtiene los servidores FTP disponibles
+
+        Toma el primer analizador de red disponible y le pide los FTP
+        accesibles.
+        """
        #return ns_utils.ns_lookup_prefix(prefix='ftp')
        
         analizer_list=ns_utils.ns_lookup_prefix(prefix='analizer')
-        print(analizer_list)
+        print('Buscando analizadores de red...')
         for name,a in analizer_list.items():
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(10)
                     first_analizer= a 
-                    print(first_analizer)
+
                     s.connect(first_analizer) 
                     s.send(b'ftp')
                     self.available_ftps= json.loads(s.recv(2048))
                     break
-            except:
-                continue
+            except (TimeoutError,ConnectionRefusedError):
+                pass
 
 
     def get_best_ftp_server(self):
@@ -80,7 +86,6 @@ class Proxy:
                 ftp_soc.close()
                     
                 time.sleep(5)
-                print(t1.is_alive(), t2.is_alive())
         finally: 
             print('Connection closed with', addr)
             conn.close()
@@ -98,5 +103,14 @@ class Proxy:
                 conn,addr = s.accept()
                 conn.settimeout(TIME_OUT)
                 print('connected to',addr)
+
+                if len(self.available_ftps) == 0:
+                    # si no hay servidores ftp disponibles, se retorna la respuesta de
+                    # 421 Servicio no disponible (rfc959)
+
+                    send_control_response(conn, 421,
+                            'Service not available, closing control connection.')
+                    conn.close()
+                    continue
 
                 threading.Thread(target=self.handle_conn, args=(conn, addr)).start()

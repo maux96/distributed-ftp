@@ -20,7 +20,7 @@ class Analizer:
     def _refresh_avalible_nodes(self,
                                 type: Literal['ftp', 'proxy', 'analizer']
                                 ):
-        
+        #TODO verificar que hacer cuando no encuentra el servidor de nombres,
         setattr(self,f'available_{type}',ns_utils.ns_lookup_prefix(type))
 
     def _refresh_ftp_nodes(self):
@@ -35,13 +35,16 @@ class Analizer:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.settimeout(5) 
                     s.connect(ftp_addr)
+                    #se comprueba que el servidor ftp este aceptando conexiones
                     if s.recv(2048).decode('ascii').split(' ')[0] == '220':
                         valid_ftp[name] = ftp_addr
+                    else:
+                        raise ConnectionError('Bad Connection')
                     s.send(b'QUIT')
-            except (TimeoutError, OSError):
+            except (TimeoutError, OSError, ConnectionError):
+                # en caso de que no se logre conectar
                 ns_utils.ns_remove_name(name)
                 pass
-        print(valid_ftp)
         self.available_ftp = valid_ftp 
 
     def refresh_loop(self,func: Callable):
