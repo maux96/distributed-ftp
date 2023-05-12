@@ -97,7 +97,8 @@ class STORCommand(BaseCommand):
                 'Closing data connection.')
 
             ### TODO escribirle al coordinador que esciribio un archivo
-            context.save_write_operation(f'STOR {" ".join(args)}') 
+            if context.user != 'admin' :
+                context.save_write_operation(f'STOR {" ".join(args)}') 
         else:
             context.send_control_response(501,
                 'Invalid Directory.')
@@ -117,7 +118,9 @@ class MKDCommand(BaseCommand):
             context.send_control_response(257,
                 'Directory Created.')
 
-            context.save_write_operation(f'MKD {" ".join(args)}') 
+            # TODO: poner un usuario modificable
+            if context.user != 'admin':
+                context.save_write_operation(f'MKD {" ".join(args)}') 
         else:
             context.send_control_response(501,
                 'Invalid Directory.')
@@ -135,6 +138,7 @@ class DELECommand(BaseCommand):
                 'File removed')
 
 
+        if context.user != 'admin':
             context.save_write_operation(f'DELE {" ".join(args)}') 
         else:
             context.send_control_response(550,
@@ -154,7 +158,8 @@ class RMDCommand(BaseCommand):
                 context.send_control_response(250,
                     'Dir removed.')
 
-                context.save_write_operation(f'RMD {" ".join(args)}') 
+                if context.user != 'admin':
+                    context.save_write_operation(f'RMD {" ".join(args)}') 
             except: 
                 context.send_control_response(550,
                     'Dir contains files.')

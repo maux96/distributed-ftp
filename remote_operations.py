@@ -3,7 +3,10 @@ import re
 from pathlib import Path 
 from os import environ
 
-
+def login(user_name, socket: socket.socket):
+    socket.send(b'USER admin')
+    socket.recv(2048)
+    pass
 
 def ftp_to_ftp_copy(addr1, addr2, file_path1: str | Path, file_path2: str | Path):
     s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -11,8 +14,14 @@ def ftp_to_ftp_copy(addr1, addr2, file_path1: str | Path, file_path2: str | Path
 
     s1.connect(addr1)
     s2.connect(addr2)
-    print(s1.recv(2048).decode('ascii'))
-    print(s2.recv(2048).decode('ascii'))
+
+    #welcome message
+    s1.recv(2048).decode('ascii')
+    s2.recv(2048).decode('ascii')
+
+    #login
+    login('admin',s1)
+    login('admin',s2)
 
     # open data port (PASV) with 1
     s1.send(b'PASV')
@@ -49,12 +58,51 @@ def create_folder(addr, path: str | Path):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
         s1.settimeout(10)
         s1.connect(addr)
-        print(s1.recv(2048).decode('ascii'))
+
+        #welcome message
+        s1.recv(2048).decode('ascii')
+
+        login('admin', s1)
 
         s1.send(f"MKD {path}".encode('ascii'))
 
         # TODO comprobar que haya sido valida la creacion de la carpeta
         s1.recv(2048)
+
+def delete_file(addr, path: str | Path):
+    path = Path(path)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
+        s1.settimeout(10)
+        s1.connect(addr)
+
+        #welcome message
+        s1.recv(2048).decode('ascii')
+
+        login('admin', s1)
+
+        s1.send(f"DELE {path}".encode('ascii'))
+
+        # TODO comprobar que haya sido valida la creacion de la carpeta
+        s1.recv(2048)
+    pass
+
+def delete_folder(addr, path: str | Path):
+    path = Path(path)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
+        s1.settimeout(10)
+        s1.connect(addr)
+
+        #welcome message
+        s1.recv(2048).decode('ascii')
+
+        login('admin', s1)
+
+        s1.send(f"RMD {path}".encode('ascii'))
+
+        # TODO comprobar que haya sido valida la creacion de la carpeta
+        s1.recv(2048)
+    pass
+    pass
 
 if __name__ == '__main__':
     if 'PORT1' not in environ and 'PORT2' not in environ:

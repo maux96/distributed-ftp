@@ -21,6 +21,7 @@ class Context:
         self.PORT = ftp_server.port 
         self.write_log = ftp_server.write_operations 
         self._is_die_requested = False
+        self.user_name = 'anonymous' 
 
 
     @property
@@ -39,8 +40,10 @@ class Context:
 
     def set_coordinator(self, port: int):
         addr,_=self.control_connection.getsockname()
-        print(">>>>>>>>>>",addr)
         self._ftp_server.set_coordinator((addr, port))
+
+    def login(self, user_name: str):
+        self.user = user_name
 
     def verify_and_get_absolute_os_path(self,path: Path | str, is_dir=True):
         """

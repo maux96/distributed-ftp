@@ -61,7 +61,7 @@ class Coordinator:
         logging.info(f"Total current FTPs: {len(valid_ftp)}")
         self.available_ftp = valid_ftp 
 
-    def refresh_loop(self,func: Callable):
+    def _refresh_loop(self,func: Callable):
         while True:
             func()
             time.sleep(self.refresh_time)
@@ -78,21 +78,41 @@ class Coordinator:
             ftp_id = request.pop(0)
             request[0]=request[0].upper()
 
+            # TODO: ver los problemas que puede dar con las rutas no absolutas :( 
             match request:
-                case ['STOR', path]:
-                    
+                case ['STOR', *path]:
+                    path = ' '.join(path)
+                    print(">>>>>>>>>>>>>", path) 
+                    for name, (host,port) in self.available_ftp.items():
+                        if ftp_id!=name:
+                            logging.debug(
+                                f"path:{path} | from:{self.available_ftp[ftp_id]} | to: {(host,port)}")
+                            remote_operations.ftp_to_ftp_copy(
+                                addr1=self.available_ftp[ftp_id],
+                                addr2=(host,port),
+                                file_path1=path,
+                                file_path2=path,
+                            )
                     pass
 
-                case ['MKD', path]:
-
+                case ['MKD', *path]:
+                    path = ' '.join(path)
                     for name, (host,port) in self.available_ftp.items():
                         if ftp_id!=name:
                             remote_operations.create_folder((host, port), path)
 
-                case ['DELE', path]:
+                case ['DELE', *path]:
+                    path = ' '.join(path)
+                    for name, (host,port) in self.available_ftp.items():
+                        if ftp_id!=name:
+                            remote_operations.delete_file((host, port), path)
                     pass
 
-                case ['RMD', path]:
+                case ['RMD', *path]:
+                    path = ' '.join(path)
+                    for name, (host,port) in self.available_ftp.items():
+                        if ftp_id!=name:
+                            remote_operations.delete_folder((host, port), path)
                     pass
 
         except TimeoutError:
@@ -105,7 +125,7 @@ class Coordinator:
 
     def run(self):
         # TODO verificar primero que no haya ningun otro coordinador activo
-        threading.Thread(target=self.refresh_loop,args=(self._refresh_ftp_nodes,)).start()
+        threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,)).start()
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))

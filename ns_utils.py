@@ -29,13 +29,18 @@ def ns_lookup(name, ns: NameServer | None = None ) -> None | tuple[str, int]:
     return uri.host, uri.port
 
 def ns_lookup_prefix(prefix, ns: NameServer | None = None ):
+    """
+    Retorna un diccionario con los nombres (sin los prefijos) como claves
+    y las (direccion, puerto) como valor.
+    """
+
     if ns is None:
         ns=Pyro5.api.locate_ns()
     sol = {} 
     for k,v in ns.list(prefix=prefix).items():
         _,addr=v.split('@')
         host,port=addr.split(':')
-        sol[k] = (host, int(port))
+        sol[k[len(prefix)+1:]] = (host, int(port))
     return sol
 
 def ns_remove_name(name , ns: NameServer | None = None ): 
