@@ -6,7 +6,6 @@ from os import environ
 
 
 def ftp_to_ftp_copy(addr1, addr2, file_path1: str | Path, file_path2: str | Path):
-
     s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -43,6 +42,19 @@ def ftp_to_ftp_copy(addr1, addr2, file_path1: str | Path, file_path2: str | Path
     print(control_response1)
     control_response2=s2.recv(2048).decode('ascii')
     print(control_response2)
+
+
+def create_folder(addr, path: str | Path):
+    path = Path(path)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
+        s1.settimeout(10)
+        s1.connect(addr)
+        print(s1.recv(2048).decode('ascii'))
+
+        s1.send(f"MKD {path}".encode('ascii'))
+
+        # TODO comprobar que haya sido valida la creacion de la carpeta
+        s1.recv(2048)
 
 if __name__ == '__main__':
     if 'PORT1' not in environ and 'PORT2' not in environ:

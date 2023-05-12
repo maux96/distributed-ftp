@@ -3,6 +3,11 @@ from .basic_commands import *
 from .data_commands import * 
 from .data_openers_commands import * 
 from .navigation_commands import * 
+from .change_state_commands import *
+
+CHANGE_STATE_COMMANDS = [
+   SETCOORDCommand,
+]
 
 BASICS = [
    NOOPCommand,

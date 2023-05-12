@@ -2,6 +2,8 @@ from ftp_server.server import FTP, FTPConfiguration
 from ftp_server import commands
 from proxy import Proxy
 from analizer import Analizer
+from coordinator_server.coordinator import Coordinator  
+
 import ns_utils
 
 import random
@@ -15,7 +17,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='FTP Distribuido')
     parser.add_argument('service',
-                        choices=['ftp', 'proxy', 'analizer'],
+                        choices=['ftp', 'coordinator'],
                         help='Tipo de servicio a ejecutar')
 
     parser.add_argument('--id',default='DEFAULT_ID', help='El id del servidor')
@@ -52,3 +54,7 @@ if __name__ == '__main__':
 
     elif args.service == 'analizer':
         Analizer(HOST,PORT,10).run()
+
+    elif args.service == 'coordinator':
+        Coordinator(HOST, PORT, refresh_time=10).run()
+        pass
