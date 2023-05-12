@@ -36,6 +36,7 @@ NAVIGATION = [
 ]
 
 ALL = [
+   *CHANGE_STATE_COMMANDS,
    *BASICS,
    *DATA_OPENERS,
    *DATA,

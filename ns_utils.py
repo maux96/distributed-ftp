@@ -3,6 +3,7 @@ from Pyro5.nameserver import NameServer
 from Pyro5.errors import NamingError
 from Pyro5.api import URI
 
+import logging
 
 def ns_register(name: str ,host: str, port: int, ns: NameServer | None = None):
     if ns is None:
@@ -10,6 +11,9 @@ def ns_register(name: str ,host: str, port: int, ns: NameServer | None = None):
 
     ns: NameServer
     ns.register(name,f'PYRO:{name}@{host}:{port}')
+
+    logging.info(f"{name} register in the nameserver!")
+
 
 def ns_lookup(name, ns: NameServer | None = None ) -> None | tuple[str, int]:
     if ns is None:

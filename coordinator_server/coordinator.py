@@ -2,6 +2,7 @@ import socket
 import time
 import threading
 from queue import Queue
+import logging
 
 import ns_utils
 import remote_operations
@@ -39,9 +40,16 @@ class Coordinator:
                     s.settimeout(5) 
                     s.connect(ftp_addr)
                     #se comprueba que el servidor ftp este aceptando conexiones
+
                     if s.recv(2048).decode('ascii').split(' ')[0] == '220':
-                        valid_ftp[name] = ftp_addr
                         s.send(f"SETCOORD {self.port}".encode('ascii'))
+
+                        resp =s.recv(2048).decode('ascii').split(' ')[0]
+
+                        if resp == '200':
+                            valid_ftp[name] = ftp_addr
+                        else:
+                            raise ConnectionError('Bad Connection')
                     else:
                         raise ConnectionError('Bad Connection')
                     s.send(b'QUIT')
@@ -49,6 +57,8 @@ class Coordinator:
                 # en caso de que no se logre conectar
                 ns_utils.ns_remove_name(name)
                 pass
+
+        logging.info(f"Total current FTPs: {len(valid_ftp)}")
         self.available_ftp = valid_ftp 
 
     def refresh_loop(self,func: Callable):
@@ -62,8 +72,12 @@ class Coordinator:
         try:
             request=conn.recv(1024).decode('ascii')
             request=request.split()
+
+            logging.info(f'{addr}::{"::".join(request)}')
+
             ftp_id = request.pop(0)
             request[0]=request[0].upper()
+
             match request:
                 case ['STOR', path]:
                     
@@ -71,7 +85,7 @@ class Coordinator:
 
                 case ['MKD', path]:
 
-                    for name, (host,port) in self.available_ftp:
+                    for name, (host,port) in self.available_ftp.items():
                         if ftp_id!=name:
                             remote_operations.create_folder((host, port), path)
 
@@ -82,7 +96,8 @@ class Coordinator:
                     pass
 
         except TimeoutError:
-            print('Timeout')
+            #print('Timeout')
+            logging.error(f"Connection Timeout {addr}")
         finally:
             conn.close()
 
@@ -92,13 +107,15 @@ class Coordinator:
         # TODO verificar primero que no haya ningun otro coordinador activo
         threading.Thread(target=self.refresh_loop,args=(self._refresh_ftp_nodes,)).start()
 
-        print('Starting!')
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen() 
+
+            logging.info("Server Starting")
             while True:
                 conn, addr = s.accept()
-                print(addr, 'with writing operation.')
+                #print(addr, 'with writing operation.')
+                logging.info(f"{addr} with write operation.")
 
                 threading.Thread(target=self.handle_conn, args=(conn,addr)).start()
 

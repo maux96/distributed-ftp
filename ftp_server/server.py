@@ -3,6 +3,8 @@ import threading
 from typing import TypedDict
 from queue import Queue
 from time import sleep
+import logging
+
 
 from .utils import prepare_command_args 
 from .commands import BaseCommand 
@@ -40,13 +42,15 @@ class FTP:
 
             operation=self.write_operations.get()
             if self.current_coordinator is None: 
-                print("There is no coordinator available!")
+                #print("There is no coordinator available!")
+                logging.info("There is no coordinator available!")
                 self.write_operations.put(operation)
                 sleep(10)
                 continue
-            
+           
+            logging.info(f"Sending writeoperation to coordinator {operation}")
             with utils.connect_socket_to(*self.current_coordinator) as soc:
-                soc.send(operation)
+                soc.send(operation.encode('ascii'))
 
     def start_connection(self,conn: socket.socket, addr):
         try:
@@ -68,6 +72,8 @@ class FTP:
                     if command.name() == command_type:
                         exist_command=True
                         command._resolve(current_context,args[1:]) 
+
+                        logging.info(f'{addr}::{" ".join(args)}')
                         break
                 if not exist_command:
                     send_control_response(conn, 502, 'Command not implemented!')
@@ -75,21 +81,25 @@ class FTP:
 
         finally:
             conn.close()
-            print('Connection Closed', addr)
+            #print('Connection Closed', addr)
+            logging.info(f'Connection Closed {addr}')
 
     def run(self):
-        print('Starting server...', end='')
+        #print('Starting server...', end='')
 
         threading.Thread(target=self.coordinator_communication,args=()).start()
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen() 
-            print('DONE!')
+            #print('DONE!')
+
+            logging.info("Server Started!")
 
             while True:
                 conn, addr = s.accept()
-                print('Connected with', addr)
+                #print('Connected with', addr)
+                logging.info(f'Connected with {addr}')
                 threading.Thread(target=self.start_connection,args=(conn, addr)).start()
 
 if __name__ =='__main__':

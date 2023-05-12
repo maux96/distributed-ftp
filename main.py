@@ -9,7 +9,7 @@ import ns_utils
 import random
 import argparse
 
-
+import logging
 
 
 if __name__ == '__main__':
@@ -29,6 +29,8 @@ if __name__ == '__main__':
                         help='En el caso de ser un FTP, la raiz del almacenamiento.')
     parser.add_argument('--welcome-msg', default='Connection Success!',
                         help='El Mensaje de bienvenida')
+    parser.add_argument('--logging-lvl', default=logging.DEBUG,
+                        help='El nivel de loggeo del nodo')
     args = parser.parse_args()
 
     ID = args.id
@@ -37,8 +39,11 @@ if __name__ == '__main__':
     ROOT_DIR = args.root_dir
     WELCOME_MSG = args.welcome_msg
 
+    logging.basicConfig(level=int(args.logging_lvl))
+
     ns_utils.ns_register(f"{args.service}_{ID}",HOST,PORT)
-    print(f"Server {ID} ejecutandose en {HOST}:{PORT}.")
+    #print(f"Server {ID} ejecutandose en {HOST}:{PORT}.")
+    logging.info(f"Server {ID} ejecutandose en {HOST}:{PORT}.")
     if args.service == 'ftp':
         FTP(FTPConfiguration(
             id=ID,
