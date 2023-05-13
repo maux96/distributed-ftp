@@ -1,7 +1,8 @@
 from pathlib import Path
 import socket
 from queue import Queue
-# TODO fix circular import
+
+from typing import Literal
 
 from . import response 
 
@@ -38,6 +39,14 @@ class Context:
     def save_write_operation(self, value):
         self.write_log.put(self._ftp_server.id+" "+value)
 
+    def save_write_op(self,
+                      type_: Literal['STOR', 'MKD', 'DELE', 'RMD'],
+                      path: str ):
+
+        path=self.get_absolute_path(path)
+        self.save_write_operation(f"{type_} {path}")
+
+
     def set_coordinator(self, port: int):
         addr,_=self.control_connection.getsockname()
         self._ftp_server.set_coordinator((addr, port))
@@ -67,6 +76,9 @@ class Context:
         return ( path.is_absolute() and\
                      (self.root_path / path.relative_to('/')).is_file() ) or\
                 (self.current_absolute_os_path / path).is_file()
+
+    def get_absolute_path(self, path):
+        return str(self.get_os_absolute_path(path))[len(str(self.root_path)):]
 
     def get_os_absolute_path(self, client_path: Path | str):
         """

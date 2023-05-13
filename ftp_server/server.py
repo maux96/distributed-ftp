@@ -48,7 +48,7 @@ class FTP:
                 sleep(10)
                 continue
            
-            logging.info(f"Sending writeoperation to coordinator {operation}")
+            logging.info(f"Sending write-operation to coordinator {operation}")
             with utils.connect_socket_to(*self.current_coordinator) as soc:
                 soc.send(operation.encode('ascii'))
 

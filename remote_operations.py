@@ -8,12 +8,12 @@ def login(user_name, socket: socket.socket):
     socket.recv(2048)
     pass
 
-def ftp_to_ftp_copy(addr1, addr2, file_path1: str | Path, file_path2: str | Path):
+def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_path2: str | Path):
     s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    s1.connect(addr1)
-    s2.connect(addr2)
+    s1.connect(emiter_addr)
+    s2.connect(replication_addr)
 
     #welcome message
     s1.recv(2048).decode('ascii')
@@ -53,11 +53,11 @@ def ftp_to_ftp_copy(addr1, addr2, file_path1: str | Path, file_path2: str | Path
     print(control_response2)
 
 
-def create_folder(addr, path: str | Path):
+def create_folder(replication_addr, path: str | Path):
     path = Path(path)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
         s1.settimeout(10)
-        s1.connect(addr)
+        s1.connect(replication_addr)
 
         #welcome message
         s1.recv(2048).decode('ascii')
@@ -69,11 +69,11 @@ def create_folder(addr, path: str | Path):
         # TODO comprobar que haya sido valida la creacion de la carpeta
         s1.recv(2048)
 
-def delete_file(addr, path: str | Path):
+def delete_file(replication_addr, path: str | Path):
     path = Path(path)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
         s1.settimeout(10)
-        s1.connect(addr)
+        s1.connect(replication_addr)
 
         #welcome message
         s1.recv(2048).decode('ascii')
@@ -86,11 +86,11 @@ def delete_file(addr, path: str | Path):
         s1.recv(2048)
     pass
 
-def delete_folder(addr, path: str | Path):
+def delete_folder(replication_addr, path: str | Path):
     path = Path(path)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
         s1.settimeout(10)
-        s1.connect(addr)
+        s1.connect(replication_addr)
 
         #welcome message
         s1.recv(2048).decode('ascii')

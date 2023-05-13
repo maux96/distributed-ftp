@@ -66,6 +66,12 @@ class Coordinator:
             func()
             time.sleep(self.refresh_time)
 
+    def _replicate_write_operation(self,*, emiter_node_name: str, f: Callable, **args):
+        for name, (host,port) in self.available_ftp.items():
+            if emiter_node_name!=name:
+                f(**args, replication_addr=(host,port))
+
+
     def handle_conn(self, conn: socket.socket, addr):
         """ Repetir la orden a cada uno de los ftps"""
         conn.settimeout(10)
@@ -78,42 +84,38 @@ class Coordinator:
             ftp_id = request.pop(0)
             request[0]=request[0].upper()
 
-            # TODO: ver los problemas que puede dar con las rutas no absolutas :( 
             match request:
                 case ['STOR', *path]:
                     path = ' '.join(path)
-                    print(">>>>>>>>>>>>>", path) 
-                    for name, (host,port) in self.available_ftp.items():
-                        if ftp_id!=name:
-                            logging.debug(
-                                f"path:{path} | from:{self.available_ftp[ftp_id]} | to: {(host,port)}")
-                            remote_operations.ftp_to_ftp_copy(
-                                addr1=self.available_ftp[ftp_id],
-                                addr2=(host,port),
-                                file_path1=path,
-                                file_path2=path,
-                            )
-                    pass
+                    self._replicate_write_operation(emiter_node_name=ftp_id,
+                                                    f=remote_operations.ftp_to_ftp_copy,
+                                                    emiter_addr=self.available_ftp[ftp_id],
+                                                    file_path1=path,
+                                                    file_path2=path,)
 
                 case ['MKD', *path]:
                     path = ' '.join(path)
-                    for name, (host,port) in self.available_ftp.items():
-                        if ftp_id!=name:
-                            remote_operations.create_folder((host, port), path)
+                    self._replicate_write_operation(
+                        f=remote_operations.create_folder,
+                        emiter_node_name=ftp_id,
+                        path=path,
+                    )
 
                 case ['DELE', *path]:
                     path = ' '.join(path)
-                    for name, (host,port) in self.available_ftp.items():
-                        if ftp_id!=name:
-                            remote_operations.delete_file((host, port), path)
-                    pass
+                    self._replicate_write_operation(
+                        f=remote_operations.delete_file,
+                        emiter_node_name=ftp_id,
+                        path=path,
+                    )
 
                 case ['RMD', *path]:
                     path = ' '.join(path)
-                    for name, (host,port) in self.available_ftp.items():
-                        if ftp_id!=name:
-                            remote_operations.delete_folder((host, port), path)
-                    pass
+                    self._replicate_write_operation(
+                        f=remote_operations.delete_folder,
+                        emiter_node_name=ftp_id,
+                        path=path,
+                    )
 
         except TimeoutError:
             #print('Timeout')
