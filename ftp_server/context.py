@@ -1,5 +1,8 @@
 from pathlib import Path
 import socket
+from queue import Queue
+
+from typing import Literal
 
 from . import response 
 
@@ -7,19 +10,19 @@ from . import response
 class Context:
     def __init__(
             self,*,
+            ftp_server,
             control_connection: socket.socket,
-            root_path:Path | str,
-            host: str,
-            port: int
         ) -> None:
-
+        self._ftp_server = ftp_server
         self.control_connection = control_connection
         self.data_connection = socket.socket(-1)
         self.client_path= Path('/')
-        self.root_path= Path(root_path)
-        self.HOST = host
-        self.PORT = port
+        self.root_path= Path(ftp_server.root_path)
+        self.HOST = ftp_server.host
+        self.PORT = ftp_server.port 
+        self.write_log = ftp_server.write_operations 
         self._is_die_requested = False
+        self.user_name = 'anonymous' 
 
 
     @property
@@ -32,6 +35,24 @@ class Context:
 
     def die(self):
         self._is_die_requested = True 
+
+    def save_write_operation(self, value):
+        self.write_log.put(self._ftp_server.id+" "+value)
+
+    def save_write_op(self,
+                      type_: Literal['STOR', 'MKD', 'DELE', 'RMD'],
+                      path: str ):
+
+        path=self.get_absolute_path(path)
+        self.save_write_operation(f"{type_} {path}")
+
+
+    def set_coordinator(self, port: int):
+        addr,_=self.control_connection.getsockname()
+        self._ftp_server.set_coordinator((addr, port))
+
+    def login(self, user_name: str):
+        self.user = user_name
 
     def verify_and_get_absolute_os_path(self,path: Path | str, is_dir=True):
         """
@@ -55,6 +76,9 @@ class Context:
         return ( path.is_absolute() and\
                      (self.root_path / path.relative_to('/')).is_file() ) or\
                 (self.current_absolute_os_path / path).is_file()
+
+    def get_absolute_path(self, path):
+        return str(self.get_os_absolute_path(path))[len(str(self.root_path)):]
 
     def get_os_absolute_path(self, client_path: Path | str):
         """

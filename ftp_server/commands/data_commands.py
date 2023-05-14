@@ -96,7 +96,9 @@ class STORCommand(BaseCommand):
             context.send_control_response(226,
                 'Closing data connection.')
 
-
+            ### TODO escribirle al coordinador que esciribio un archivo
+            if context.user != 'admin' :
+                context.save_write_op('STOR'," ".join(args)) 
         else:
             context.send_control_response(501,
                 'Invalid Directory.')
@@ -115,6 +117,11 @@ class MKDCommand(BaseCommand):
             (parent_dir_abs_route/dir_name).mkdir()
             context.send_control_response(257,
                 'Directory Created.')
+
+            # TODO: poner un usuario modificable
+            if context.user != 'admin':
+                context.save_write_op('MKD'," ".join(args)) 
+
         else:
             context.send_control_response(501,
                 'Invalid Directory.')
@@ -130,9 +137,14 @@ class DELECommand(BaseCommand):
             absolute_path.unlink()
             context.send_control_response(250,
                 'File removed')
+
+
+        if context.user != 'admin':
+            context.save_write_op('DELE'," ".join(args)) 
         else:
             context.send_control_response(550,
-                'Requested action not taken. File unavailable (e.g., file not found, no access)')
+                'Requested action not taken.\
+File unavailable (e.g., file not found, no access)')
 
 class RMDCommand(BaseCommand):
     @classmethod
@@ -146,6 +158,9 @@ class RMDCommand(BaseCommand):
                 absolute_path.rmdir()
                 context.send_control_response(250,
                     'Dir removed.')
+
+                if context.user != 'admin':
+                    context.save_write_op('RMD'," ".join(args)) 
             except: 
                 context.send_control_response(550,
                     'Dir contains files.')
