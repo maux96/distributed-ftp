@@ -34,6 +34,7 @@ class Coordinator:
 
         ftp_nodes_in_name_server: dict[str, tuple[str,int]]= self._get_avalible_nodes('ftp')
         valid_ftp: dict[str, tuple[str,int]] = {} 
+        exist_changes= False 
         for name,ftp_addr in ftp_nodes_in_name_server.items():  
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -48,17 +49,23 @@ class Coordinator:
 
                         if resp == '200':
                             valid_ftp[name] = ftp_addr
+                            if name not in self.available_ftp:
+                                exist_changes = True 
+                                logging.info(f'New ftp server {name}::{ftp_addr}')
                         else:
                             raise ConnectionError('Bad Connection')
                     else:
                         raise ConnectionError('Bad Connection')
                     s.send(b'QUIT')
-            except (TimeoutError, OSError, ConnectionError):
-                # en caso de que no se logre conectar
-                ns_utils.ns_remove_name(name)
+            except (TimeoutError, OSError, ConnectionError) as e:
+                # en caso de que no se logre conectark
+                ns_utils.ns_remove_name(f"ftp_{name}")
+                exist_changes = True 
+                logging.info(f'{e}::Removing ftp server {name}.')
                 pass
 
-        logging.info(f"Total current FTPs: {len(valid_ftp)}")
+        if exist_changes:
+            logging.info(f"Total current FTPs: {len(valid_ftp)}")
         self.available_ftp = valid_ftp 
 
     def _refresh_loop(self,func: Callable):
@@ -69,7 +76,13 @@ class Coordinator:
     def _replicate_write_operation(self,*, emiter_node_name: str, f: Callable, **args):
         for name, (host,port) in self.available_ftp.items():
             if emiter_node_name!=name:
-                f(**args, replication_addr=(host,port))
+                try:
+                    f(**args, replication_addr=(host,port))
+                except:
+                    # TODO Hacer algo cuando falle la replicacion !
+                    logging.info(f'Failed command replication\
+from f{emiter_node_name} to f{name}.')
+                    pass
 
 
     def handle_conn(self, conn: socket.socket, addr):
@@ -79,10 +92,10 @@ class Coordinator:
             request=conn.recv(1024).decode('ascii')
             request=request.split()
 
-            logging.info(f'{addr}::{"::".join(request)}')
-
             ftp_id = request.pop(0)
             request[0]=request[0].upper()
+
+            logging.info(f'Replicating command from {ftp_id}::{" ".join(request)}')
 
             match request:
                 case ['STOR', *path]:
