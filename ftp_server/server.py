@@ -40,17 +40,28 @@ class FTP:
     def coordinator_communication(self):
         while True:
 
-            operation=self.write_operations.get()
+            while self.write_operations.empty():
+                sleep(1)
+            #operation=self.write_operations.get()
+            operation=self.write_operations.queue[0]
             if self.current_coordinator is None: 
-                #print("There is no coordinator available!")
-                logging.info("There is no coordinator available!")
+                logging.warning("No coordinator available!")
                 self.write_operations.put(operation)
                 sleep(10)
                 continue
            
             logging.info(f"Sending write-operation to coordinator {operation}")
-            with utils.connect_socket_to(*self.current_coordinator) as soc:
-                soc.send(operation.encode('ascii'))
+            if (soc:=utils.connect_socket_to(*self.current_coordinator)) and\
+                  soc is not None:
+
+                with soc:
+                # TODO ver si vale la pena esperar a una respuesta que confirme que al 
+                # menos se duplico una vez la operacion en otro nodo ftp
+                    soc.send(operation.encode('ascii'))
+                    self.write_operations.get()
+            else: 
+               #self.write_operations.put(operation)
+               self.current_coordinator = None
 
     def start_connection(self,conn: socket.socket, addr):
         try:
