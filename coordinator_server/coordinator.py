@@ -71,22 +71,62 @@ class Coordinator:
             logging.info(f"Total current FTPs: {len(valid_ftp)}")
         self.available_ftp = valid_ftp 
 
-    def _refresh_loop(self,func: Callable):
+    def _refresh_loop(self,func: Callable, wait_time):
         while True:
             func()
-            time.sleep(self.refresh_time)
+            time.sleep(wait_time)
 
     def _replicate_write_operation(self,*, emiter_node_name: str, f: Callable, **args):
         for name, (host,port) in self.available_ftp.items():
             if emiter_node_name!=name:
                 try:
                     f(**args, replication_addr=(host,port))
+                    logging.warning(f'Replication done\
+from {emiter_node_name} to {name}.')
                 except:
                     # TODO Hacer algo cuando falle la replicacion !
-                    logging.info(f'Failed command replication\
-from f{emiter_node_name} to f{name}.')
+                    logging.warning(f'Failed command replication\
+from {emiter_node_name} to {name}.')
                     pass
 
+    def _next_command_to_replicate(self):
+        
+        ftp_id, request =self.write_operations.get()
+
+        match request:
+            case ['STOR', *path]:
+                path = ' '.join(path)
+                self._replicate_write_operation(emiter_node_name=ftp_id,
+                                                f=remote_operations.ftp_to_ftp_copy,
+                                                emiter_addr=self.available_ftp[ftp_id],
+                                                file_path1=path,
+                                                file_path2=path,)
+
+            case ['MKD', *path]:
+                path = ' '.join(path)
+                self._replicate_write_operation(
+                    f=remote_operations.create_folder,
+                    emiter_node_name=ftp_id,
+                    path=path,
+                )
+
+            case ['DELE', *path]:
+                path = ' '.join(path)
+                self._replicate_write_operation(
+                    f=remote_operations.delete_file,
+                    emiter_node_name=ftp_id,
+                    path=path,
+                )
+
+            case ['RMD', *path]:
+                path = ' '.join(path)
+                self._replicate_write_operation(
+                    f=remote_operations.delete_folder,
+                    emiter_node_name=ftp_id,
+                    path=path,
+                )
+
+        pass
 
     def handle_conn(self, conn: socket.socket, addr):
         """ Repetir la orden a cada uno de los ftps"""
@@ -102,40 +142,8 @@ from f{emiter_node_name} to f{name}.')
             ftp_id = request.pop(0)
             request[0]=request[0].upper()
 
-            logging.info(f'Replicating command from {ftp_id}::{" ".join(request)}')
-
-            match request:
-                case ['STOR', *path]:
-                    path = ' '.join(path)
-                    self._replicate_write_operation(emiter_node_name=ftp_id,
-                                                    f=remote_operations.ftp_to_ftp_copy,
-                                                    emiter_addr=self.available_ftp[ftp_id],
-                                                    file_path1=path,
-                                                    file_path2=path,)
-
-                case ['MKD', *path]:
-                    path = ' '.join(path)
-                    self._replicate_write_operation(
-                        f=remote_operations.create_folder,
-                        emiter_node_name=ftp_id,
-                        path=path,
-                    )
-
-                case ['DELE', *path]:
-                    path = ' '.join(path)
-                    self._replicate_write_operation(
-                        f=remote_operations.delete_file,
-                        emiter_node_name=ftp_id,
-                        path=path,
-                    )
-
-                case ['RMD', *path]:
-                    path = ' '.join(path)
-                    self._replicate_write_operation(
-                        f=remote_operations.delete_folder,
-                        emiter_node_name=ftp_id,
-                        path=path,
-                    )
+            logging.info(f'Saving to replicate command from {ftp_id}::{" ".join(request)}')
+            self.write_operations.put((ftp_id, request))
 
         except TimeoutError:
             logging.error(f"Connection Timeout {addr}")
@@ -148,7 +156,8 @@ from f{emiter_node_name} to f{name}.')
 
     def run(self):
         # TODO verificar primero que no haya ningun otro coordinador activo
-        threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,)).start()
+        threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
+        threading.Thread(target=self._refresh_loop,args=(self._next_command_to_replicate,0)).start()
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
