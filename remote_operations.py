@@ -52,6 +52,9 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     control_response2=s2.recv(2048).decode('ascii')
     #print(control_response2)
 
+    s1.close()
+    s2.close()
+
 
 def create_folder(replication_addr, path: str | Path):
     path = Path(path)

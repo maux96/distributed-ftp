@@ -39,14 +39,14 @@ class FTP:
 
     def coordinator_communication(self):
         while True:
-
+            logging.debug(f'Operations: {self.write_operations.queue}')
             while self.write_operations.empty():
                 sleep(1)
             #operation=self.write_operations.get()
             operation=self.write_operations.queue[0]
             if self.current_coordinator is None: 
                 logging.warning("No coordinator available!")
-                self.write_operations.put(operation)
+                #self.write_operations.put(operation)
                 sleep(10)
                 continue
            
@@ -71,7 +71,7 @@ class FTP:
                         self.current_coordinator = None
             else: 
                #self.write_operations.put(operation)
-                logging.debug('COMUNICATION WITH COORDINATOR FAILED')
+                logging.debug('COMUNICATION WITH COORDINATOR FAILED (SOCKET)')
                 self.current_coordinator = None
 
     def start_connection(self,conn: socket.socket, addr):
@@ -100,7 +100,9 @@ class FTP:
                 if not exist_command:
                     send_control_response(conn, 502, 'Command not implemented!')
                 pass
-
+        except (ConnectionResetError, TimeoutError) as e:
+            logging.error(f'ERROR:{e}')
+            pass
         finally:
             conn.close()
             #print('Connection Closed', addr)
