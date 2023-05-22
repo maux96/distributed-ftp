@@ -57,11 +57,22 @@ class FTP:
                 with soc:
                 # TODO ver si vale la pena esperar a una respuesta que confirme que al 
                 # menos se duplico una vez la operacion en otro nodo ftp
-                    soc.send(operation.encode('ascii'))
-                    self.write_operations.get()
+                    soc.settimeout(10)
+                    try:
+                        soc.send(operation.encode('ascii'))
+                        if soc.recv(1024).decode() == 'OK':
+                            logging.debug('COMUNICATION WITH COORDINATOR DONE')
+                            self.write_operations.get()
+                        else:
+                            logging.debug('COMUNICATION WITH COORDINATOR FAILED')
+                            self.current_coordinator = None
+                    except TimeoutError:
+                        logging.debug('COMUNICATION WITH COORDINATOR FAILED')
+                        self.current_coordinator = None
             else: 
                #self.write_operations.put(operation)
-               self.current_coordinator = None
+                logging.debug('COMUNICATION WITH COORDINATOR FAILED')
+                self.current_coordinator = None
 
     def start_connection(self,conn: socket.socket, addr):
         try:

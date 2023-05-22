@@ -26,7 +26,7 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     # open data port (PASV) with 1
     s1.send(b'PASV')
     control_response1=s1.recv(2048).decode('ascii')
-    print(control_response1)
+    #print(control_response1)
     direction= re.search(r'\(.*\)',control_response1)
     if direction is None:
         raise Exception("Problem with call to PASV")
@@ -36,21 +36,21 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     # open data port (PORT) with 2 using PASV port for 1
     s2.send(f'PORT {direction}'.encode('ascii'))
     control_response2=s2.recv(2048).decode('ascii')
-    print(control_response2)
+    #print(control_response2)
 
     # sending the file
     s1.send(f'RETR {file_path1}'.encode('ascii'))
     control_response1=s1.recv(2048).decode('ascii')
-    print(control_response1)
+    #print(control_response1)
 
     s2.send(f'STOR {file_path2}'.encode('ascii'))
     control_response2=s2.recv(2048).decode('ascii')
-    print(control_response2)
+    #print(control_response2)
 
     control_response1=s1.recv(2048).decode('ascii')
-    print(control_response1)
+    #print(control_response1)
     control_response2=s2.recv(2048).decode('ascii')
-    print(control_response2)
+    #print(control_response2)
 
 
 def create_folder(replication_addr, path: str | Path):

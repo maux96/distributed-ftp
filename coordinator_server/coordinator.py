@@ -18,6 +18,7 @@ class Coordinator:
         self.refresh_time = refresh_time
         self.ftp_tree= {}
         self.write_operations = Queue() 
+        self.accepting_connections = True
         pass
 
 
@@ -31,6 +32,8 @@ class Coordinator:
         Toma todos los servidores ftp en el servidor de nombres y comprueba conectividad
         ,filtra los validos y los guarda y manda a elminar los invalidos en el ns. 
         """
+        if not self.accepting_connections:
+            return
 
         ftp_nodes_in_name_server: dict[str, tuple[str,int]]= self._get_avalible_nodes('ftp')
         valid_ftp: dict[str, tuple[str,int]] = {} 
@@ -92,6 +95,10 @@ from f{emiter_node_name} to f{name}.')
             request=conn.recv(1024).decode('ascii')
             request=request.split()
 
+            if not self.accepting_connections:
+                conn.send(b'CLOSED')
+                return 
+
             ftp_id = request.pop(0)
             request[0]=request[0].upper()
 
@@ -131,8 +138,9 @@ from f{emiter_node_name} to f{name}.')
                     )
 
         except TimeoutError:
-            #print('Timeout')
             logging.error(f"Connection Timeout {addr}")
+        else: 
+            conn.send(b'OK')
         finally:
             conn.close()
 
