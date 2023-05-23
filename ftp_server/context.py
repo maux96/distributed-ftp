@@ -77,6 +77,11 @@ class Context:
                      (self.root_path / path.relative_to('/')).is_file() ) or\
                 (self.current_absolute_os_path / path).is_file()
 
+    def get_last_write_operation_id(self) -> int:
+        return self._ftp_server.last_write_command_id
+    def increse_last_operation(self):
+        self._ftp_server.last_write_command_id +=1
+
     def get_absolute_path(self, path):
         return str(self.get_os_absolute_path(path))[len(str(self.root_path)):]
 

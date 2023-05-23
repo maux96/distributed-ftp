@@ -2,6 +2,9 @@ import socket
 import re
 from pathlib import Path 
 from os import environ
+import logging
+
+import utils
 
 def login(user_name, socket: socket.socket):
     socket.send(b'USER admin')
@@ -54,6 +57,20 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
 
     s1.close()
     s2.close()
+
+def increse_last_command(addr):
+    if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
+        with s1:
+            s1.recv(2048).decode('ascii')
+            login('admin', s1)
+
+            s1.send("INCRESE".encode('ascii'))
+            control_response =  s1.recv(1024).decode('ascii')
+            # TODO verificar que se incremento correctamente
+            logging.debug('increse done!')
+    else:    
+        logging.debug('failedd increse_last_command')
+
 
 
 def create_folder(replication_addr, path: str | Path):

@@ -33,6 +33,7 @@ class FTP:
         self.write_operations = Queue()
         self.write_operations_done = set() 
         self.current_coordinator = None
+        self.last_write_command_id = 0
 
     def set_coordinator(self, coordinator_dir):
         self.current_coordinator = coordinator_dir 
@@ -109,20 +110,15 @@ class FTP:
             logging.info(f'Connection Closed {addr}')
 
     def run(self):
-        #print('Starting server...', end='')
-
         threading.Thread(target=self.coordinator_communication,args=()).start()
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
             s.listen() 
-            #print('DONE!')
-
             logging.info("Server Started!")
 
             while True:
                 conn, addr = s.accept()
-                #print('Connected with', addr)
                 logging.info(f'Connected with {addr}')
                 threading.Thread(target=self.start_connection,args=(conn, addr)).start()
 
