@@ -1,5 +1,6 @@
 from ..context import Context
 
+import logging
 
 class BaseCommand:
 
@@ -7,8 +8,9 @@ class BaseCommand:
 
     @classmethod
     def resolve(cls, context: Context, args: list[str]):
-        if cls.require_auth and context.user_name != 'admin':
+        if cls.require_auth and context.user != 'admin':
             context.send_control_response(530, 'Not logued in as admin')
+            logging.warning(f"User {context.user} bloqued! ({cls.name()})")
             return
 
         cls._resolve(context, args)

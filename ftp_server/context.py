@@ -22,7 +22,7 @@ class Context:
         self.PORT = ftp_server.port 
         self.write_log = ftp_server.write_operations 
         self._is_die_requested = False
-        self.user_name = 'anonymous' 
+        self.user = 'anonymous' 
 
 
     @property

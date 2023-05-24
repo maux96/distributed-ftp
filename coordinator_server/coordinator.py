@@ -1,5 +1,6 @@
 import socket
 import time
+import random
 import threading
 from queue import Queue
 
@@ -57,13 +58,17 @@ class Coordinator:
                     #se comprueba que el servidor ftp este aceptando conexiones
 
                     if s.recv(2048).decode('ascii').split(' ')[0] == '220':
+
+                        remote_operations.login('admin', s)
+
                         s.send(f"SETCOORD {self.port}".encode('ascii'))
 
                         resp_code, last_operation, *_ =s.recv(2048).decode('ascii').split(' ')
-                        logging.debug(f"name:{name} | rs:{resp_code} | last_id:{last_operation}")
-                        last_operation = int(last_operation)
+                        logging.debug(f"name:{name} | rs:{resp_code} | last_id:{last_operation} | last_global:{self.last_operation}")
 
                         if resp_code == '200':
+                            last_operation = int(last_operation)
+
                             valid_ftp[name] =  FTPDescriptor(
                                 host=ftp_addr[0],
                                 port=ftp_addr[1],
@@ -76,6 +81,13 @@ class Coordinator:
                             if name not in self.available_ftp:
                                 exist_changes = True 
                                 logging.info(f'New ftp server {name}::{ftp_addr}')
+                            #else:
+                                # toma el maximo entre el valor que tiene el coordinador
+                                # y el que tiene el propio ftp
+                               #valid_ftp[name]['last_operation_id']=max(
+                               #    last_operation,
+                               #    self.available_ftp[name]['last_operation_id'])
+
                         else:
                             raise ConnectionError('Bad Connection')
                     else:
@@ -92,8 +104,8 @@ class Coordinator:
             logging.info(f"Total current FTPs: {len(valid_ftp)}")
         self.available_ftp = valid_ftp 
 
-    def _add_operations_to_do(self, last_operation: int, ftp_name: str):
-        for index in range(last_operation, len(self.operations_log)):
+    def _add_operations_to_do(self, last_operation_in_ftp: int, ftp_name: str):
+        for index in range(last_operation_in_ftp, len(self.operations_log)):
             self.operations_to_do.put((index, ftp_name))
         
 
@@ -104,7 +116,7 @@ class Coordinator:
             time.sleep(wait_time)
 
     def _replicate_write_operation(self,*, emiter_node_name: str, f: Callable, **args):
-
+        """ ## Deprecated """
         emiter_ftp_descriptor=self.available_ftp[emiter_node_name]
         remote_operations.increse_last_command(
             (emiter_ftp_descriptor['host'], emiter_ftp_descriptor['port']))
@@ -124,20 +136,39 @@ from {emiter_node_name} to {name}.')
                     pass
 
     def _save_command_to_replicate(self):
-        self.last_operation+=1        
 
         ftp_id, request =self.new_operations.get()
+
+        self.last_operation+=1        
         self.operations_log.append((ftp_id, request))
 
+
+        self.available_ftp[ftp_id]['last_operation_id']+=1
         # ya que sabemos el id de el commando, mandamos a que se incremente el cliente que lo emitio'
         remote_operations.increse_last_command((self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']))
 
 
+    def get_ftp_with_data(self, operation_id: int):
+        # definir una funcion de seleccion de ftp variable        
+        posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operation_id'] >=operation_id ] 
+        if len(posibles) > 0 :
+            return posibles[random.randint(0,len(posibles)-1)]
+        return None
+
+
+
     def _consume_command_to_replicate(self,):
         log_index, ftp_id = self.operations_to_do.get()
-        emiter_name,request=self.operations_log[log_index]
+
+        _,request=self.operations_log[log_index]
+        ftp_with_data_name = self.get_ftp_with_data(log_index)
+
+        if ftp_with_data_name is None:
+            logging.debug("There is no ftp available to replicate the data")
+            return
 
         if ftp_id not in self.available_ftp:
+            logging.debug("The ftp is not available, thats why you cant send it the new data")
             return
 
         ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
@@ -149,8 +180,8 @@ from {emiter_node_name} to {name}.')
                 path = ' '.join(path)
                 remote_operations.ftp_to_ftp_copy(
                     emiter_addr=(
-                        self.available_ftp[emiter_name]['host'],
-                        self.available_ftp[emiter_name]['port'],
+                        self.available_ftp[ftp_with_data_name]['host'],
+                        self.available_ftp[ftp_with_data_name]['port'],
                     ),
                     replication_addr=ftp_addr,
                     file_path1=path,
@@ -169,7 +200,9 @@ from {emiter_node_name} to {name}.')
                 path = ' '.join(path)
                 remote_operations.delete_folder(ftp_addr,path=path)
 
+        self.available_ftp[ftp_id]['last_operation_id']+=1
         remote_operations.increse_last_command(ftp_addr)
+        logging.debug(f'consume command to replicate ended for {ftp_id} from {ftp_with_data_name}')  
 
     def handle_conn(self, conn: socket.socket, addr):
         """ Repetir la orden a cada uno de los ftps"""
