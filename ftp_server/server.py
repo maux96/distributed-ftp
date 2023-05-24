@@ -94,7 +94,7 @@ class FTP:
                 for command in self.available_commands:
                     if command.name() == command_type:
                         exist_command=True
-                        command._resolve(current_context,args[1:]) 
+                        command.resolve(current_context,args[1:]) 
 
                         logging.info(f'{addr}::{" ".join(args)}')
                         break
