@@ -20,6 +20,8 @@ class SETCOORDCommand(BaseCommand):
 Coordinator Changed!")
 
 class INCRESECommand(BaseCommand):
+    require_auth = True
+
     @classmethod
     def _resolve(cls, context: Context, args: list[str]):
         context.increse_last_operation()
