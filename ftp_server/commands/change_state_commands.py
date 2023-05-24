@@ -8,6 +8,8 @@ from ..context import Context
 """
 
 class SETCOORDCommand(BaseCommand):
+    require_auth = True
+
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):
         context.set_coordinator(int(args[0]))
