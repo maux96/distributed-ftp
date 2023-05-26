@@ -151,7 +151,7 @@ from {emiter_node_name} to {name}.')
 
     def get_ftp_with_data(self, operation_id: int):
         # definir una funcion de seleccion de ftp variable        
-        posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operation_id'] >=operation_id ] 
+        posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operation_id'] > operation_id ] 
         if len(posibles) > 0 :
             return posibles[random.randint(0,len(posibles)-1)]
         return None
@@ -161,7 +161,7 @@ from {emiter_node_name} to {name}.')
     def _consume_command_to_replicate(self,):
         log_index, ftp_id = self.operations_to_do.get()
 
-        _,request=self.operations_log[log_index]
+        original_ftp_with_data,request=self.operations_log[log_index]
         ftp_with_data_name = self.get_ftp_with_data(log_index)
 
         if ftp_with_data_name is None:
@@ -176,30 +176,37 @@ from {emiter_node_name} to {name}.')
 
         logging.debug(f'replicating {request} to {ftp_id}')
         #TODO manejo de errores
-        match request:
-            case ['STOR', *path]:
-                path = ' '.join(path)
-                remote_operations.ftp_to_ftp_copy(
-                    emiter_addr=(
-                        self.available_ftp[ftp_with_data_name]['host'],
-                        self.available_ftp[ftp_with_data_name]['port'],
-                    ),
-                    replication_addr=ftp_addr,
-                    file_path1=path,
-                    file_path2=path
-                )
+        try:
+            match request:
+                case ['STOR', *path]:
+                    path = ' '.join(path)
+                    remote_operations.ftp_to_ftp_copy(
+                        emiter_addr=(
+                            self.available_ftp[ftp_with_data_name]['host'],
+                            self.available_ftp[ftp_with_data_name]['port'],
+                        ),
+                        replication_addr=ftp_addr,
+                        file_path1=path,
+                        file_path2=path
+                    )
 
-            case ['MKD', *path]:
-                path = ' '.join(path)
-                remote_operations.create_folder(ftp_addr,path=path)
+                case ['MKD', *path]:
+                    path = ' '.join(path)
+                    remote_operations.create_folder(ftp_addr,path=path)
 
-            case ['DELE', *path]:
-                path = ' '.join(path)
-                remote_operations.delete_file(ftp_addr,path=path)
+                case ['DELE', *path]:
+                    path = ' '.join(path)
+                    remote_operations.delete_file(ftp_addr,path=path)
 
-            case ['RMD', *path]:
-                path = ' '.join(path)
-                remote_operations.delete_folder(ftp_addr,path=path)
+                case ['RMD', *path]:
+                    path = ' '.join(path)
+                    remote_operations.delete_folder(ftp_addr,path=path)
+
+        except Exception as e:
+            logging.warning(f"Failed to replicate the data from {ftp_addr} to {ftp_id}!")
+            print("*"*10)
+            logging.debug(e)
+            print("*"*10)
 
         self.available_ftp[ftp_id]['last_operation_id']+=1
         remote_operations.increse_last_command(ftp_addr)
