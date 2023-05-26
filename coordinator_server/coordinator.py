@@ -7,7 +7,8 @@ from queue import Queue
 import logging
 
 import ns_utils
-import remote_operations
+
+from . import remote_operations 
 
 from typing import Literal, Callable, TypedDict
 
