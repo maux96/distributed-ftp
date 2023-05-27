@@ -99,6 +99,8 @@ class STORCommand(BaseCommand):
             ### TODO escribirle al coordinador que esciribio un archivo
             if context.user != 'admin' :
                 context.save_write_op('STOR'," ".join(args)) 
+           #else: 
+           #    context.increse_last_operation()
         else:
             context.send_control_response(501,
                 'Invalid Directory.')
@@ -121,6 +123,8 @@ class MKDCommand(BaseCommand):
             # TODO: poner un usuario modificable
             if context.user != 'admin':
                 context.save_write_op('MKD'," ".join(args)) 
+           #else: 
+           #    context.increse_last_operation()
 
         else:
             context.send_control_response(501,
@@ -142,6 +146,7 @@ class DELECommand(BaseCommand):
         if context.user != 'admin':
             context.save_write_op('DELE'," ".join(args)) 
         else:
+            #context.increse_last_operation()
             context.send_control_response(550,
                 'Requested action not taken.\
 File unavailable (e.g., file not found, no access)')
@@ -161,6 +166,8 @@ class RMDCommand(BaseCommand):
 
                 if context.user != 'admin':
                     context.save_write_op('RMD'," ".join(args)) 
+               #else:
+               #    context.increse_last_operation()
             except: 
                 context.send_control_response(550,
                     'Dir contains files.')

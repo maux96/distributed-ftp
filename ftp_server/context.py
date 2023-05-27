@@ -22,7 +22,7 @@ class Context:
         self.PORT = ftp_server.port 
         self.write_log = ftp_server.write_operations 
         self._is_die_requested = False
-        self.user_name = 'anonymous' 
+        self.user = 'anonymous' 
 
 
     @property
@@ -76,6 +76,11 @@ class Context:
         return ( path.is_absolute() and\
                      (self.root_path / path.relative_to('/')).is_file() ) or\
                 (self.current_absolute_os_path / path).is_file()
+
+    def get_last_write_operation_id(self) -> int:
+        return self._ftp_server.last_write_command_id
+    def increse_last_operation(self):
+        self._ftp_server.last_write_command_id +=1
 
     def get_absolute_path(self, path):
         return str(self.get_os_absolute_path(path))[len(str(self.root_path)):]

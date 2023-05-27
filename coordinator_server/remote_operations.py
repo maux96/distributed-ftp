@@ -2,11 +2,13 @@ import socket
 import re
 from pathlib import Path 
 from os import environ
+import logging
+
+import utils
 
 def login(user_name, socket: socket.socket):
     socket.send(b'USER admin')
     socket.recv(2048)
-    pass
 
 def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_path2: str | Path):
     s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -26,7 +28,7 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     # open data port (PASV) with 1
     s1.send(b'PASV')
     control_response1=s1.recv(2048).decode('ascii')
-    #print(control_response1)
+
     direction= re.search(r'\(.*\)',control_response1)
     if direction is None:
         raise Exception("Problem with call to PASV")
@@ -36,24 +38,34 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     # open data port (PORT) with 2 using PASV port for 1
     s2.send(f'PORT {direction}'.encode('ascii'))
     control_response2=s2.recv(2048).decode('ascii')
-    #print(control_response2)
+
 
     # sending the file
     s1.send(f'RETR {file_path1}'.encode('ascii'))
     control_response1=s1.recv(2048).decode('ascii')
-    #print(control_response1)
-
     s2.send(f'STOR {file_path2}'.encode('ascii'))
     control_response2=s2.recv(2048).decode('ascii')
-    #print(control_response2)
-
+    
     control_response1=s1.recv(2048).decode('ascii')
-    #print(control_response1)
     control_response2=s2.recv(2048).decode('ascii')
-    #print(control_response2)
 
     s1.close()
     s2.close()
+    logging.debug('ftp to ftp copy ended!')
+
+def increse_last_command(addr):
+    if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
+        with s1:
+            s1.recv(2048).decode('ascii')
+            login('admin', s1)
+
+            s1.send("INCRESE".encode('ascii'))
+            control_response =  s1.recv(1024).decode('ascii')
+            # TODO verificar que se incremento correctamente
+            logging.debug(f'INCRESSING | Response:{control_response}')
+    else:    
+        logging.debug('failedd increse_last_command')
+
 
 
 def create_folder(replication_addr, path: str | Path):
