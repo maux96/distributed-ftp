@@ -96,7 +96,7 @@ class Coordinator:
                     s.send(b'QUIT')
             except (TimeoutError, OSError, ConnectionError) as e:
                 # en caso de que no se logre conectark
-                ns_utils.ns_remove_name(f"ftp_{name}")
+                #ns_utils.ns_remove_name(f"ftp_{name}")
                 exist_changes = True 
                 logging.info(f'{e}::Removing ftp server {name}.')
                 pass
