@@ -48,8 +48,8 @@ class Context:
 
 
     def set_coordinator(self, port: int):
-        addr,_=self.control_connection.getsockname()
-        self._ftp_server.set_coordinator((addr, port))
+        addr_peer_name,_=self.control_connection.getpeername()
+        self._ftp_server.set_coordinator((addr_peer_name, port))
 
     def login(self, user_name: str):
         self.user = user_name

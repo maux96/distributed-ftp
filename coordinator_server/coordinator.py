@@ -9,6 +9,7 @@ import logging
 import ns_utils
 
 from . import remote_operations 
+from . import bully
 
 from typing import Literal, Callable, TypedDict
 
@@ -18,7 +19,8 @@ class FTPDescriptor(TypedDict):
     last_operation_id: int
 
 class Coordinator:
-    def __init__(self, host, port, refresh_time) -> None:
+    def __init__(self,id , host, port, refresh_time) -> None:
+        self.id = id
         self.host = host
         self.port = port
         self.available_ftp: dict[str, FTPDescriptor]={} 
@@ -28,17 +30,48 @@ class Coordinator:
 
         self.new_operations = Queue() 
         self.operations_to_do = Queue()
-        self.accepting_connections = True
+        self.accepting_connections = False 
 
         # operaciones realizadas
         self.operations_log: list[tuple[str, list]] = []
         self.last_operation = 0
 
+        # protocolo de seleccion de lider bully
+        self.bully_protocol = bully.Bully(self) 
 
     def _get_avalible_nodes(self,
                                 type: Literal['ftp', 'coordinator']
                                 ):
         return ns_utils.ns_lookup_prefix(type)
+
+    def _refresh_coordinator_nodes(self):
+        """Toma todos los servidores coordinadores y filtra los validos"""
+
+        coordinator_nodes_in_name_server: dict[str, tuple[str,int]]= self.\
+                                                                _get_avalible_nodes('coordinator')
+
+        valid_coords = {}
+        for name,coord_addr in coordinator_nodes_in_name_server.items():  
+            if name == self.id:
+                continue
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(5) 
+                    s.connect(coord_addr)
+                    logging.debug(f"sending ping to {name}")
+                    s.send(bytes(f"{self.id} PING", encoding='ascii'))
+                    
+                    if s.recv(256).decode().upper() == 'OK':
+                        valid_coords[name] = coord_addr
+                    else: 
+                        # esto nunca deberia de pasar :D
+                        pass
+                    
+            except (ConnectionError, TimeoutError):
+                pass
+            pass
+
+        self.available_coordinator = valid_coords
 
     def _refresh_ftp_nodes(self):
         """
@@ -48,6 +81,7 @@ class Coordinator:
         if not self.accepting_connections:
             return
 
+        logging.debug("refreshing ftp")
         ftp_nodes_in_name_server: dict[str, tuple[str,int]]= self._get_avalible_nodes('ftp')
         valid_ftp: dict[str, FTPDescriptor] = {} 
         exist_changes= False 
@@ -100,7 +134,8 @@ class Coordinator:
                 exist_changes = True 
                 logging.info(f'{e}::Removing ftp server {name}.')
                 pass
-
+            
+        logging.debug("end refreshing with count = " +str(len(valid_ftp)))            
         if exist_changes:
             logging.info(f"Total current FTPs: {len(valid_ftp)}")
         self.available_ftp = valid_ftp 
@@ -109,8 +144,6 @@ class Coordinator:
         for index in range(last_operation_in_ftp, len(self.operations_log)):
             self.operations_to_do.put((index, ftp_name))
         
-
-
     def _refresh_loop(self,func: Callable, wait_time: int):
         while True:
             func()
@@ -127,13 +160,11 @@ class Coordinator:
             if emiter_node_name!=name:
                 try:
                     f(**args, replication_addr=(host,port))
-                    logging.warning(f'Replication done\
-from {emiter_node_name} to {name}.')
+                    logging.warning(f'Replication done from {emiter_node_name} to {name}.')
                     remote_operations.increse_last_command((host, port))
                 except:
                     # TODO Hacer algo cuando falle la replicacion !
-                    logging.warning(f'Failed command replication\
-from {emiter_node_name} to {name}.')
+                    logging.warning(f'Failed command replication from {emiter_node_name} to {name}.')
                     pass
 
     def _save_command_to_replicate(self):
@@ -148,15 +179,12 @@ from {emiter_node_name} to {name}.')
         # ya que sabemos el id de el commando, mandamos a que se incremente el cliente que lo emitio'
         remote_operations.increse_last_command((self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']))
 
-
     def get_ftp_with_data(self, operation_id: int):
         # definir una funcion de seleccion de ftp variable        
         posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operation_id'] > operation_id ] 
         if len(posibles) > 0 :
             return posibles[random.randint(0,len(posibles)-1)]
         return None
-
-
 
     def _consume_command_to_replicate(self,):
         log_index, ftp_id = self.operations_to_do.get()
@@ -219,15 +247,20 @@ from {emiter_node_name} to {name}.')
             request=conn.recv(1024).decode('ascii')
             request=request.split()
 
+            node_id = request.pop(0)
+            request[0]=request[0].upper()
+            if request[0] == "PING":
+                conn.send(b'ok')
+                logging.debug(f"reciving ping from {node_id}")
+                return 
+
             if not self.accepting_connections:
                 conn.send(b'CLOSED')
                 return 
 
-            ftp_id = request.pop(0)
-            request[0]=request[0].upper()
 
-            logging.info(f'Saving to replicate command from {ftp_id}::{" ".join(request)}')
-            self.new_operations.put((ftp_id, request))
+            logging.info(f'Saving to replicate command from {node_id}::{" ".join(request)}')
+            self.new_operations.put((node_id, request))
             logging.info(f'new_operations:{self.new_operations.queue}')
 
         except TimeoutError:
@@ -237,12 +270,16 @@ from {emiter_node_name} to {name}.')
         finally:
             conn.close()
 
-
-
     def run(self):
         threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
+        threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()
+
         threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
         threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
+
+        threading.Thread(target=self.bully_protocol.recive_message,args=()).start()
+        threading.Thread(target=self.bully_protocol.loop_ping,args=()).start()
+
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
@@ -257,7 +294,6 @@ from {emiter_node_name} to {name}.')
 
 
         pass
-
-
+    
 if __name__ == '__main__':
     pass
