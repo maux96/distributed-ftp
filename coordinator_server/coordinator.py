@@ -59,7 +59,7 @@ class Coordinator:
                     s.settimeout(5) 
                     s.connect(coord_addr)
                     logging.debug(f"sending ping to {name}")
-                    s.send(b"PING")
+                    s.send(bytes(f"{self.id} PING", encoding='ascii'))
                     
                     if s.recv(256).decode().upper() == 'OK':
                         valid_coords[name] = coord_addr
