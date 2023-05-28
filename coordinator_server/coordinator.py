@@ -81,6 +81,7 @@ class Coordinator:
         if not self.accepting_connections:
             return
 
+        logging.debug("refreshing ftp")
         ftp_nodes_in_name_server: dict[str, tuple[str,int]]= self._get_avalible_nodes('ftp')
         valid_ftp: dict[str, FTPDescriptor] = {} 
         exist_changes= False 
@@ -133,7 +134,8 @@ class Coordinator:
                 exist_changes = True 
                 logging.info(f'{e}::Removing ftp server {name}.')
                 pass
-
+            
+        logging.debug("end refreshing with count = " +str(len(valid_ftp)))            
         if exist_changes:
             logging.info(f"Total current FTPs: {len(valid_ftp)}")
         self.available_ftp = valid_ftp 
