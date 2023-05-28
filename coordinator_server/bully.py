@@ -2,7 +2,7 @@
 import utils
 import time
 import logging
-
+from .sinc import Sinc
 class Bully:
     DEFAULT_LISTENING_PORT = 9999
 
@@ -13,6 +13,7 @@ class Bully:
         self.listen_port = utils.create_socket_and_listen(
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
         self.leader_host = None
+        self.sinc = Sinc(coordinator,self)
 
     def send_election(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
@@ -98,6 +99,17 @@ class Bully:
                         logging.info(str(self.coordinator.id) +": I'm not the leader now")
                         self.leader = False
                         self.accepting_connections = False
+                elif message == "get_sinc":
+                    #Dice que esta listo para enviar la informacion
+                    socket.send(b"ok")
+
+                elif message == "set_sinc":
+                    #Dice que esta listo para recibir la informacion
+                    socket.send(b"ok")
+
+                elif message != None:
+                    sinc.recieve_sinc(message)
+
             except (TimeoutError):
                 pass
             finally:
