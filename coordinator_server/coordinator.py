@@ -44,6 +44,35 @@ class Coordinator:
                                 ):
         return ns_utils.ns_lookup_prefix(type)
 
+    def _refresh_coordinator_nodes(self):
+        """Toma todos los servidores coordinadores y filtra los validos"""
+
+        coordinator_nodes_in_name_server: dict[str, tuple[str,int]]= self.\
+                                                                _get_avalible_nodes('coordinator')
+
+        valid_coords = {}
+        for name,coord_addr in coordinator_nodes_in_name_server.items():  
+            if name == self.id:
+                continue
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(5) 
+                    s.connect(coord_addr)
+                    logging.debug(f"sending ping to {name}")
+                    s.send(b"PING")
+                    
+                    if s.recv(256).decode().upper() == 'OK':
+                        valid_coords[name] = coord_addr
+                    else: 
+                        # esto nunca deberia de pasar :D
+                        pass
+                    
+            except (ConnectionError, TimeoutError):
+                pass
+            pass
+
+        self.available_coordinator = valid_coords
+
     def _refresh_ftp_nodes(self):
         """
         Toma todos los servidores ftp en el servidor de nombres y comprueba conectividad
@@ -216,15 +245,20 @@ class Coordinator:
             request=conn.recv(1024).decode('ascii')
             request=request.split()
 
+            node_id = request.pop(0)
+            request[0]=request[0].upper()
+            if request[0] == "PING":
+                conn.send(b'ok')
+                logging.debug(f"reciving ping from {node_id}")
+                return 
+
             if not self.accepting_connections:
                 conn.send(b'CLOSED')
                 return 
 
-            ftp_id = request.pop(0)
-            request[0]=request[0].upper()
 
-            logging.info(f'Saving to replicate command from {ftp_id}::{" ".join(request)}')
-            self.new_operations.put((ftp_id, request))
+            logging.info(f'Saving to replicate command from {node_id}::{" ".join(request)}')
+            self.new_operations.put((node_id, request))
             logging.info(f'new_operations:{self.new_operations.queue}')
 
         except TimeoutError:
@@ -236,6 +270,8 @@ class Coordinator:
 
     def run(self):
         threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
+        threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()
+
         threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
         threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
 
