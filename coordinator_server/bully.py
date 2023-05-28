@@ -71,7 +71,7 @@ class Bully:
             socket.send(b"ping")
             is_ok = socket.recv(64)
             if (is_ok == b"ok"):
-                logging.info(str(self.coordinator.id) +": recieve ping from " +str(host))
+                logging.info(str(self.coordinator.id) +": recieve ping 'ok' from " +str(host))
                 return True
             else:
                 return False
@@ -95,7 +95,7 @@ class Bully:
                         self.leader = True
                         logging.info(str(self.coordinator.id) +": My leader is " +str(host))
                     else:
-                        logging.info(str(self.coordinator.id) +": I'mnt the leader now")
+                        logging.info(str(self.coordinator.id) +": I'm not the leader now")
                         self.leader = False
                         self.accepting_connections = False
             except (TimeoutError):

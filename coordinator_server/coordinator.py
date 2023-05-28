@@ -30,7 +30,7 @@ class Coordinator:
 
         self.new_operations = Queue() 
         self.operations_to_do = Queue()
-        self.accepting_connections = True
+        self.accepting_connections = False 
 
         # operaciones realizadas
         self.operations_log: list[tuple[str, list]] = []
