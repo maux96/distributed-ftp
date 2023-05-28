@@ -9,6 +9,7 @@ import logging
 import ns_utils
 
 from . import remote_operations 
+from . import bully
 
 from typing import Literal, Callable, TypedDict
 
@@ -34,6 +35,8 @@ class Coordinator:
         self.operations_log: list[tuple[str, list]] = []
         self.last_operation = 0
 
+        # protocolo de seleccion de lider bully
+        self.bully_protocol = bully.Bully(self) 
 
     def _get_avalible_nodes(self,
                                 type: Literal['ftp', 'coordinator']
@@ -109,8 +112,6 @@ class Coordinator:
         for index in range(last_operation_in_ftp, len(self.operations_log)):
             self.operations_to_do.put((index, ftp_name))
         
-
-
     def _refresh_loop(self,func: Callable, wait_time: int):
         while True:
             func()
@@ -127,13 +128,11 @@ class Coordinator:
             if emiter_node_name!=name:
                 try:
                     f(**args, replication_addr=(host,port))
-                    logging.warning(f'Replication done\
-from {emiter_node_name} to {name}.')
+                    logging.warning(f'Replication done from {emiter_node_name} to {name}.')
                     remote_operations.increse_last_command((host, port))
                 except:
                     # TODO Hacer algo cuando falle la replicacion !
-                    logging.warning(f'Failed command replication\
-from {emiter_node_name} to {name}.')
+                    logging.warning(f'Failed command replication from {emiter_node_name} to {name}.')
                     pass
 
     def _save_command_to_replicate(self):
@@ -148,15 +147,12 @@ from {emiter_node_name} to {name}.')
         # ya que sabemos el id de el commando, mandamos a que se incremente el cliente que lo emitio'
         remote_operations.increse_last_command((self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']))
 
-
     def get_ftp_with_data(self, operation_id: int):
         # definir una funcion de seleccion de ftp variable        
         posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operation_id'] > operation_id ] 
         if len(posibles) > 0 :
             return posibles[random.randint(0,len(posibles)-1)]
         return None
-
-
 
     def _consume_command_to_replicate(self,):
         log_index, ftp_id = self.operations_to_do.get()
@@ -237,12 +233,14 @@ from {emiter_node_name} to {name}.')
         finally:
             conn.close()
 
-
-
     def run(self):
         threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
         threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
         threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
+
+        threading.Thread(target=self.bully_protocol.recive_message,args=()).start()
+        threading.Thread(target=self.bully_protocol.loop_ping,args=()).start()
+
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind((self.host, self.port))
@@ -257,7 +255,6 @@ from {emiter_node_name} to {name}.')
 
 
         pass
-
-
+    
 if __name__ == '__main__':
     pass
