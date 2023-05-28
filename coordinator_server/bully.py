@@ -8,7 +8,7 @@ class Bully:
 
     def __init__(self, coordinator, sleep_time=10):
         self.coordinator = coordinator
-        self.coordinator.leader = True
+        self.leader = True
         self.sleep_time = sleep_time
         self.listen_port = utils.create_socket_and_listen(
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
@@ -36,7 +36,7 @@ class Bully:
                 finally:
                     socket.close()
 
-        self.coordinator.leader = True
+        self.leader = True
         self.coordinator.accepting_connections = True
         self.leader_host = self.coordinator.host
 
