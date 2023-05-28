@@ -1,5 +1,5 @@
 
-from .. import utils
+import utils
 import time
 
 class Bully:
@@ -19,9 +19,10 @@ class Bully:
         coordinators = self.coordinator.available_coordinator
         for id,(host, port) in coordinators.items():
             if self.coordinator.id > id:
-                #aqui ver como se abre un hilo y esa talla, y luego de n segundos hacer decidir si es el jefe
-                socket = utils.connect_socket_to(host, DEFAULT_LISTENING_PORT)
-                if socket == None:
+                #TODO aqui ver como se abre un hilo y esa talla,
+                #y luego de n segundos hacer decidir si es el jefe
+                socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+                if socket is None:
                     continue
                 try:
                     socket.settimeout(3)
@@ -40,26 +41,27 @@ class Bully:
 
         for id,(host, port) in coordinators.items():
             if self.coordinator.id < id:
-                socket = utils.connect_socket_to(host, DEFAULT_LISTENING_PORT)
-                if socket == None:
+                socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+                if socket is None:
                     continue
                 try:
                     socket.settimeout(3)
-                    socket.send("leader")
+                    socket.send(b"leader")
                 except (TimeoutError):
                     continue
                 finally:
                     socket.close()
 
     def ping(self, host):
-        if host == None: return False
+        if host is None:
+            return False
 
-        socket = utils.connect_socket_to(host, DEFAULT_LISTENING_PORT)
-        if socket == None:
+        socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+        if socket is None:
             return False
         try:
             socket.settimeout(3)
-            socket.send("ping")
+            socket.send(b"ping")
             is_ok = socket.recv(64)
             if(is_ok == b"ok"):
                 return True
@@ -76,9 +78,9 @@ class Bully:
             message = socket.recv(256).decode('ascii')
             try:
                 if message == "ping":
-                    socket.send("ok")
+                    socket.send(b"ok")
                 elif message == "election":
-                    socket.send("ok")
+                    socket.send(b"ok")
                 elif message == "leader":
                     self.leader_host = host
                     if self.coordinator.host == host:
@@ -93,7 +95,7 @@ class Bully:
              
     def loop_ping(self):
         while True:
-            if self.leader == True:
+            if self.leader :
                 self.send_election()
             else:
                 if not self.ping(self.leader_host):
