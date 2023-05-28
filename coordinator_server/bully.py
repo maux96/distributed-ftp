@@ -7,12 +7,12 @@ class Bully:
 
     def __init__(self, coordinator, sleep_time=10):
         self.coordinator = coordinator
+        self.coordinator.leader = False
         self.sleep_time = sleep_time
         self.listen_port = utils.create_socket_and_listen(
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
         self.leader_host = None
         self.recive_message()
-
 
     def send_election(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
@@ -87,8 +87,11 @@ class Bully:
                 socket.close() 
              
     def loop_ping(self):
-        while True:        
-            if not self.ping(self.leader_host):
+        while True:
+            if self.leader == True:
                 self.send_election()
+            else:
+                if not self.ping(self.leader_host):
+                    self.send_election()
             time.sleep(self.sleep_time)    
 
