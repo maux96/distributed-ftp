@@ -72,7 +72,7 @@ class FTP:
                         self.current_coordinator = None
             else: 
                #self.write_operations.put(operation)
-                logging.debug('COMUNICATION WITH COORDINATOR FAILED (SOCKET)')
+                logging.debug(f'COMUNICATION WITH COORDINATOR FAILED (TRYING TO CONNECT TO {self.current_coordinator}) ')
                 self.current_coordinator = None
 
     def start_connection(self,conn: socket.socket, addr):
