@@ -71,10 +71,11 @@ class Bully:
             socket.send(b"ping")
             is_ok = socket.recv(64)
             if (is_ok == b"ok"):
+                logging.info(str(self.coordinator.id) +": recieve ping from " +str(host))
                 return True
+            else:
+                return False
         except (TimeoutError):
-            pass
-        finally:
             return False
 
     def recive_message(self):
