@@ -41,6 +41,7 @@ class Bully:
         self.leader = True
         self.coordinator.accepting_connections = True
         self.leader_host = self.coordinator.host
+        logging.info(str(self.coordinator.id) +": I'm the leader")
 
         for id, (host, port) in coordinators.items():
             if self.coordinator.id < id:
@@ -51,7 +52,6 @@ class Bully:
                 try:
                     socket.settimeout(3)
                     socket.send(b"leader")
-                    logging.info(str(self.coordinator.id) +": I'm the leader")
                 except (TimeoutError):
                     continue
                 finally:
