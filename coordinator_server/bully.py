@@ -2,6 +2,7 @@
 import utils
 import time
 
+
 class Bully:
     DEFAULT_LISTENING_PORT = 9999
 
@@ -12,36 +13,37 @@ class Bully:
         self.listen_port = utils.create_socket_and_listen(
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
         self.leader_host = None
-        self.recive_message()
 
     def send_election(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
         coordinators = self.coordinator.available_coordinator
-        for id,(host, port) in coordinators.items():
+        for id, (host, port) in coordinators.items():
             if self.coordinator.id > id:
-                #TODO aqui ver como se abre un hilo y esa talla,
-                #y luego de n segundos hacer decidir si es el jefe
-                socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+                # TODO aqui ver como se abre un hilo y esa talla,
+                # y luego de n segundos hacer decidir si es el jefe
+                socket = utils.connect_socket_to(
+                    host, Bully.DEFAULT_LISTENING_PORT)
                 if socket is None:
                     continue
                 try:
                     socket.settimeout(3)
                     socket.send(b"election")
                     is_ok = socket.recv(64)
-                    if(is_ok == b"ok"):
+                    if (is_ok == b"ok"):
                         return
                 except (TimeoutError):
-                    continue    
+                    continue
                 finally:
                     socket.close()
 
-        self.coordinator.leader = True            
+        self.coordinator.leader = True
         self.coordinator.accepting_connections = True
         self.leader_host = self.coordinator.host
 
-        for id,(host, port) in coordinators.items():
+        for id, (host, port) in coordinators.items():
             if self.coordinator.id < id:
-                socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+                socket = utils.connect_socket_to(
+                    host, Bully.DEFAULT_LISTENING_PORT)
                 if socket is None:
                     continue
                 try:
@@ -63,11 +65,11 @@ class Bully:
             socket.settimeout(3)
             socket.send(b"ping")
             is_ok = socket.recv(64)
-            if(is_ok == b"ok"):
+            if (is_ok == b"ok"):
                 return True
         except (TimeoutError):
             pass
-        finally:    
+        finally:
             return False
 
     def recive_message(self):
@@ -84,21 +86,20 @@ class Bully:
                 elif message == "leader":
                     self.leader_host = host
                     if self.coordinator.host == host:
-                        self.leader= True
+                        self.leader = True
                     else:
                         self.leader = False
                         self.accepting_connections = False
             except (TimeoutError):
                 pass
             finally:
-                socket.close() 
-             
+                socket.close()
+
     def loop_ping(self):
         while True:
-            if self.leader :
+            if self.leader:
                 self.send_election()
             else:
                 if not self.ping(self.leader_host):
                     self.send_election()
-            time.sleep(self.sleep_time)    
-
+            time.sleep(self.sleep_time)
