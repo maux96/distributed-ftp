@@ -107,8 +107,8 @@ class Bully:
                     #Dice que esta listo para recibir la informacion
                     socket.send(b"ok")
 
-                elif message != None:
-                    sinc.recieve_sinc(message)
+                elif message is not None:
+                    self.sinc.recieve_sinc(message)
 
             except (TimeoutError):
                 pass
