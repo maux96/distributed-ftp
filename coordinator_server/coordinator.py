@@ -19,7 +19,8 @@ class FTPDescriptor(TypedDict):
     last_operation_id: int
 
 class Coordinator:
-    def __init__(self, host, port, refresh_time) -> None:
+    def __init__(self,id , host, port, refresh_time) -> None:
+        self.id = id
         self.host = host
         self.port = port
         self.available_ftp: dict[str, FTPDescriptor]={} 

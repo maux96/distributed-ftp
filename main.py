@@ -61,5 +61,5 @@ if __name__ == '__main__':
         Analizer(HOST,PORT,10).run()
 
     elif args.service == 'coordinator':
-        Coordinator(HOST, PORT, refresh_time=10).run()
+        Coordinator(ID, HOST, PORT, refresh_time=10).run()
         pass
