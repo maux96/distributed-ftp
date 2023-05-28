@@ -91,9 +91,11 @@ class Bully:
                     socket.send(b"ok")
                 elif message == "leader":
                     self.leader_host = host
-                    if self.coordinator.host != host:
-                        logging.info(str(self.coordinator.id) +": I'm not the leader now")
+                    if self.coordinator.host == host:
+                        self.leader = True
+                    else:
                         logging.info(str(self.coordinator.id) +": My leader is " +str(host))
+                        logging.info(str(self.coordinator.id) +": I'm not the leader now")
                         self.leader = False
                         self.accepting_connections = False
             except (TimeoutError):
