@@ -19,6 +19,26 @@ class SETCOORDCommand(BaseCommand):
         context.send_control_response(200, f"{context.get_last_write_operation_id()} \
 Coordinator Changed!")
 
+class ADDCOCOORDCommand(BaseCommand):
+    require_auth = True
+
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        addr, port=args[0],int(args[1])
+
+        context._ftp_server.co_coordinators.append((addr,port))
+        context.send_control_response(200, f"{context.get_last_write_operation_id()} \
+Cocoordinator Added!")
+
+class CLEARCOCOORDCommand(BaseCommand):
+    require_auth= True
+
+    @classmethod
+    def _resolve(cls,context: Context, args: list[str]):
+        context._ftp_server.co_coordinators = [] 
+        context.send_control_response(200, "CoCoordinators clear")
+
+
 class INCRESECommand(BaseCommand):
     require_auth = True
 
