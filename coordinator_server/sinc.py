@@ -1,3 +1,7 @@
+import logging
+import utils
+from .bully import Bully
+
 class Sinc:
     def __init__(self, coordinator, bully):
         self.coordinator = coordinator
@@ -54,7 +58,7 @@ class Sinc:
             buffer = ""
 
             socket.settimeout(3)
-            socket.send("data_sinc " + buffer)
+            socket.send(bytes("data_sinc " + buffer, encoding='ascii'))
             is_ok = socket.recv(64)
             if (is_ok == b"ok"):
                 logging.info(str(self.coordinator.id) +
@@ -62,7 +66,7 @@ class Sinc:
         except:
             pass
 
-    def recieve_sinc(self, message):
+    def recieve_sinc(self, message, host):
         # recibir todo el puto buffer y ponerlo
         logging.info(str(self.coordinator.id) +
                      ": recieve the buffer "+message+" for sinc from" + str(host))

@@ -49,7 +49,7 @@ class Bully:
         '''Enviar peticion de liderazgo a los otros coordinadores'''
         logging.info(str(self.coordinator.id) + ": init selection process ")
 
-        if (not is_in_k_best_aviables(1)):
+        if (not self.is_in_k_best_aviables(1)):
             return
 
         self.leader = True
@@ -58,6 +58,7 @@ class Bully:
         self.leaders_group = [self.leader_host]
         logging.info(str(self.coordinator.id) + ": I'm the leader")
 
+        coordinators = self.coordinator.available_coordinator
         for id, (host, port) in coordinators.items():
             if self.coordinator.id < id:
                 socket = utils.connect_socket_to(
@@ -82,7 +83,7 @@ class Bully:
         if socket is None:
             return
 
-        if (not is_in_k_best_aviables(Bully.K_MAX_LEADERS_GROUP)):
+        if (not self.is_in_k_best_aviables(Bully.K_MAX_LEADERS_GROUP)):
             try:
                 socket.settimeout(3)
                 socket.send(b"remove_leader_group")
@@ -148,16 +149,16 @@ class Bully:
 
                 elif message.split(" ")[0] == "data_sinc":
                     # recibe datos de sincronizacion y los procesa en la funcion proxima
-                    self.sinc.recieve_sinc(message)
+                    self.sinc.recieve_sinc(message, host)
 
                 elif message == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
-                    self.sinc.add_to_leader(host)
+                    self.add_to_leader(host)
                     socket.send(b"ok")
 
                 elif message == "remove_leader_group":
                     # recibe el tag de que quien envia va a ser eliminado del grupo de lideres secundarios
-                    self.sinc.remove_from_leader(host)
+                    self.remove_from_leader(host)
                     socket.send(b"ok")
 
             except (TimeoutError):
@@ -176,12 +177,12 @@ class Bully:
             time.sleep(self.sleep_time)
 
     def add_to_leader(self, host):
-        if (host not in leaders_group):
+        if (host not in self.leaders_group):
             self.leaders_group.remove(host)
             logging.info(str(self.coordinator.id) + ": the leader "+ host +" has been append from group")
 
     def remove_from_leader(self, host):
-        if host in leaders_group:
+        if host in self.leaders_group:
             self.leaders_group.remove(host)
             logging.info(str(self.coordinator.id) + ": the leader "+ host +" has been remove from group")
 
