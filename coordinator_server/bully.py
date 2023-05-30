@@ -174,6 +174,8 @@ class Bully:
             else:
                 if not self.ping(self.leader_host):
                     self.send_election()
+                    if not self.leader:
+                        self.send_election_for_leader_group()
             time.sleep(self.sleep_time)
 
     def add_to_leader(self, host):
