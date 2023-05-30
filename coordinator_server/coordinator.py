@@ -23,8 +23,10 @@ class Coordinator:
         self.id = id
         self.host = host
         self.port = port
+
         self.available_ftp: dict[str, FTPDescriptor]={} 
         self.available_coordinator={}
+
         self.refresh_time = refresh_time
         self.ftp_tree= {}
 
@@ -34,6 +36,7 @@ class Coordinator:
 
         # operaciones realizadas
         self.operations_log: list[tuple[str, list]] = []
+        self.base_last_opertation = 0
         self.last_operation = 0
 
         # protocolo de seleccion de lider bully
@@ -148,24 +151,6 @@ class Coordinator:
         while True:
             func()
             time.sleep(wait_time)
-
-    def _replicate_write_operation(self,*, emiter_node_name: str, f: Callable, **args):
-        """ ## Deprecated """
-        emiter_ftp_descriptor=self.available_ftp[emiter_node_name]
-        remote_operations.increse_last_command(
-            (emiter_ftp_descriptor['host'], emiter_ftp_descriptor['port']))
-
-        for name, ftp_descriptor in self.available_ftp.items():
-            host, port=ftp_descriptor['host'], ftp_descriptor['port']
-            if emiter_node_name!=name:
-                try:
-                    f(**args, replication_addr=(host,port))
-                    logging.warning(f'Replication done from {emiter_node_name} to {name}.')
-                    remote_operations.increse_last_command((host, port))
-                except:
-                    # TODO Hacer algo cuando falle la replicacion !
-                    logging.warning(f'Failed command replication from {emiter_node_name} to {name}.')
-                    pass
 
     def _save_command_to_replicate(self):
 
