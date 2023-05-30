@@ -1,4 +1,3 @@
-
 import utils
 import time
 import logging
@@ -38,19 +37,19 @@ class Bully:
                     is_ok = socket.recv(64)
                     if (is_ok == b"ok"):
                         count_sup += 1
-                        if(count_sup >= k):
+                        if (count_sup >= k):
                             return False
                 except (TimeoutError):
                     continue
                 finally:
                     socket.close()
-        return True            
+        return True
 
     def send_election(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
         logging.info(str(self.coordinator.id) + ": init selection process ")
 
-        if(not is_in_k_best_aviables(1)):
+        if (not is_in_k_best_aviables(1)):
             return
 
         self.leader = True
@@ -77,14 +76,26 @@ class Bully:
         '''Enviar peticion de liderazgo a los otros coordinadores'''
         logging.info(str(self.coordinator.id) + ": init selection process ")
 
-        if(not is_in_k_best_aviables(Bully.K_MAX_LEADERS_GROUP)):
+        socket = utils.connect_socket_to(
+            self.leader_host, Bully.DEFAULT_LISTENING_PORT)
+
+        if socket is None:
             return
 
-        self.leaders_group = [self.leader_host, self.coordinator.host]    
-        #TODO implementar la entrada al leader group, deben tenerlo todos los que pertencen a este grupo principalmente el lider general
+        if (not is_in_k_best_aviables(Bully.K_MAX_LEADERS_GROUP)):
+            try:
+                socket.settimeout(3)
+                socket.send(b"remove_leader_group")
+            finally:
+                socket.close()
 
-        logging.info(str(self.coordinator.id) + ": I'm in the leader group")
-
+        elif (not self.leader):
+            try:
+                socket.settimeout(3)
+                socket.send(b"leader_group")
+                logging.info(str(self.coordinator.id) + ": I'm in the leader group")
+            finally:
+                socket.close()
 
     def ping(self, host):
         logging.info(str(self.coordinator.id) + ": ping to " + host)
@@ -116,20 +127,17 @@ class Bully:
             message = socket.recv(256).decode('ascii')
             try:
                 if message == "ping":
+                    # recibe el ping y manda ok para atras para decir que esta disponible
                     socket.send(b"ok")
+
                 elif message == "election":
+                    # Dice que esta disponible y quien le pregunto entonces no puede ser lider
                     socket.send(b"ok")
+
                 elif message == "leader":
-                    self.leader_host = host
-                    if self.coordinator.host == host:
-                        self.leader = True
-                    else:
-                        logging.info(str(self.coordinator.id) +
-                                     ": My leader is " + str(host))
-                        logging.info(str(self.coordinator.id) +
-                                     ": I'm not the leader now")
-                        self.leader = False
-                        self.accepting_connections = False
+                    # quien esta mandando del otro lado del socket es el lider actual
+                    self.set_leader(host)
+
                 elif message == "get_sinc":
                     # Dice que esta listo para enviar la informacion
                     socket.send(b"ok")
@@ -138,8 +146,19 @@ class Bully:
                     # Dice que esta listo para recibir la informacion
                     socket.send(b"ok")
 
-                elif message is not None:
+                elif message.split(" ")[0] == "data_sinc":
+                    # recibe datos de sincronizacion y los procesa en la funcion proxima
                     self.sinc.recieve_sinc(message)
+
+                elif message == "leader_group":
+                    # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
+                    self.sinc.add_to_leader(host)
+                    socket.send(b"ok")
+
+                elif message == "remove_leader_group":
+                    # recibe el tag de que quien envia va a ser eliminado del grupo de lideres secundarios
+                    self.sinc.remove_from_leader(host)
+                    socket.send(b"ok")
 
             except (TimeoutError):
                 pass
@@ -155,3 +174,25 @@ class Bully:
                 if not self.ping(self.leader_host):
                     self.send_election()
             time.sleep(self.sleep_time)
+
+    def add_to_leader(self, host):
+        if (host not in leaders_group):
+            self.leaders_group.remove(host)
+            logging.info(str(self.coordinator.id) + ": the leader "+ host +" has been append from group")
+
+    def remove_from_leader(self, host):
+        if host in leaders_group:
+            self.leaders_group.remove(host)
+            logging.info(str(self.coordinator.id) + ": the leader "+ host +" has been remove from group")
+
+    def set_leader(self, host):
+        self.leader_host = host
+        if self.coordinator.host == host:
+            self.leader = True
+        else:
+            logging.info(str(self.coordinator.id) +
+                         ": My leader is " + str(host))
+            logging.info(str(self.coordinator.id) +
+                         ": I'm not the leader now")
+            self.leader = False
+            self.accepting_connections = False
