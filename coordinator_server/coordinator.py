@@ -160,11 +160,7 @@ class Coordinator:
         self.operations_log.append((ftp_id, request))
 
 
-        self.available_ftp[ftp_id]['last_operation_id']+=1
-        # ya que sabemos el id de el commando, mandamos a que se incremente el cliente que lo emitio'
-        remote_operations.increse_last_command((self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']))
-
-    def get_ftp_with_data(self, operation_id: int):
+    def _get_ftp_with_data(self, operation_id: int):
         # definir una funcion de seleccion de ftp variable        
         posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operation_id'] > operation_id ] 
         if len(posibles) > 0 :
@@ -174,25 +170,31 @@ class Coordinator:
     def _consume_command_to_replicate(self,):
         log_index, ftp_id = self.operations_to_do.get()
 
+        ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
         original_ftp_with_data,request=self.operations_log[log_index]
-        ftp_with_data_name = self.get_ftp_with_data(log_index)
-
-        if ftp_with_data_name is None:
-            logging.debug("There is no ftp available to replicate the data")
-            return
 
         if ftp_id not in self.available_ftp:
             logging.debug("The ftp is not available, thats why you cant send it the new data")
             return
 
-        ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
+        if ftp_id == original_ftp_with_data:
+            #si es el mismo ftp que mando la operacion,
+            #simplemente mandamos a incrementar su contador interno
+            remote_operations.increse_last_command(ftp_addr)
+            self.available_ftp[ftp_id]['last_operation_id']+=1
+            return
 
         logging.debug(f'replicating {request} to {ftp_id}')
-        #TODO manejo de errores
         try:
             match request:
                 case ['STOR', *path]:
                     path = ' '.join(path)
+
+                    ftp_with_data_name = self._get_ftp_with_data(log_index)
+                    if ftp_with_data_name is None:
+                        logging.debug("There is no ftp available to replicate the data")
+                        return
+
                     remote_operations.ftp_to_ftp_copy(
                         emiter_addr=(
                             self.available_ftp[ftp_with_data_name]['host'],
@@ -202,6 +204,8 @@ class Coordinator:
                         file_path1=path,
                         file_path2=path
                     )
+
+                    logging.debug(f'Replication ended in {ftp_id} from {ftp_with_data_name}')  
 
                 case ['MKD', *path]:
                     path = ' '.join(path)
@@ -223,9 +227,8 @@ class Coordinator:
 
         self.available_ftp[ftp_id]['last_operation_id']+=1
         remote_operations.increse_last_command(ftp_addr)
-        logging.debug(f'consume command to replicate ended for {ftp_id} from {ftp_with_data_name}')  
 
-    def handle_conn(self, conn: socket.socket, addr):
+    def _handle_conn(self, conn: socket.socket, addr):
         """ Repetir la orden a cada uno de los ftps"""
         conn.settimeout(10)
         try:
@@ -275,7 +278,7 @@ class Coordinator:
                 conn, addr = s.accept()
                 logging.info(f"{addr} with write operation.")
 
-                threading.Thread(target=self.handle_conn, args=(conn,addr)).start()
+                threading.Thread(target=self._handle_conn, args=(conn,addr)).start()
 
 
         pass
