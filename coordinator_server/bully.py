@@ -170,7 +170,7 @@ class Bully:
         logging.info(str(self.coordinator.id) + ": loop ping init ")
         while True:
             if self.leader:
-                logging.info(str(self.coordinator.id) + ": the leader_group es "+ str(leader_group))
+                logging.info(str(self.coordinator.id) + ": the leader_group es "+ str(leaders_group))
                 self.send_election()
             else:
                 if not self.ping(self.leader_host):

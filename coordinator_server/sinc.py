@@ -70,3 +70,7 @@ class Sinc:
         # recibir todo el puto buffer y ponerlo
         logging.info(str(self.coordinator.id) +
                      ": recieve the buffer "+message+" for sinc from" + str(host))
+
+    def sinc_log(self, message):
+        self.coordinator.operations_log
+        
