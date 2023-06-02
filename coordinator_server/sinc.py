@@ -1,4 +1,6 @@
 import logging
+import json
+
 import utils
 
 class Sinc:
@@ -6,6 +8,7 @@ class Sinc:
         self.DEFAULT_LISTENING_PORT= host
         self.coordinator = coordinator
         self.bully = bully
+        self.logs_dict = {}
 
     def get_sinc_from_coord(self, host):
         logging.info(str(self.coordinator.id) + ": sinc from " + host)
@@ -55,10 +58,14 @@ class Sinc:
         if socket is None:
             return Exception("Esta tratando de enviar informacion con socket None")
         try:
-            buffer = ""
+            to_send = json.dumps({
+                "hash": None, # TODO sustituir por el hash
+                "logs": self.coordinator.operations_log,
+                "logs_dict": self.logs_dict
+            })
 
             socket.settimeout(3)
-            socket.send(bytes("data_sinc " + buffer, encoding='ascii'))
+            socket.send(bytes("data_sinc " + to_send, encoding='ascii'))
             is_ok = socket.recv(64)
             if (is_ok == b"ok"):
                 logging.info(str(self.coordinator.id) +
