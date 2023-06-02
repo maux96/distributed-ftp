@@ -85,6 +85,7 @@ class Bully:
         logging.info(str(self.coordinator.host) +
                      ": init selection leader group process ")
 
+        socket=None
         if (not self.is_in_k_best_aviables(Bully.K_MAX_LEADERS_GROUP)):
             try:
                 socket = utils.connect_socket_to(
@@ -115,6 +116,7 @@ class Bully:
                     socket.close()
 
         else:  # if (not self.leader):
+
             try:
                 socket = utils.connect_socket_to(
                 self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
@@ -168,7 +170,7 @@ class Bully:
         except (TimeoutError, OSError):
             return False
 
-    def recive_message(self):
+    def receive_message(self):
         while True:
             socket, addr = self.listen_port.accept()
             socket.settimeout(Bully.TIME_OUT)
@@ -212,10 +214,8 @@ class Bully:
                     self.remove_from_leader(host)
                     socket.send(b"ok")
 
-            except (TimeoutError, OSError):
-                logging.error("TimeError in recieve message")
-            except (TimeoutError, OSError):
-                logging.error("AnotherError in recieve message")
+            except (TimeoutError, OSError) as e:
+                logging.error("Error in receiving_message"+str(e))
 
             finally:
                 socket.close()

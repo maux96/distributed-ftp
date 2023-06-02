@@ -268,7 +268,7 @@ class Coordinator:
         threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
         threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
 
-        threading.Thread(target=self.bully_protocol.recive_message,args=()).start()
+        threading.Thread(target=self.bully_protocol.receive_message,args=()).start()
         threading.Thread(target=self.bully_protocol.loop_ping,args=()).start()
 
 
