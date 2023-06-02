@@ -117,7 +117,7 @@ class Bully:
                 return True
             else:
                 return False
-        except (TimeoutError):
+        except (TimeoutError, OSError):
             return False
 
     def recive_message(self):
@@ -125,8 +125,9 @@ class Bully:
             socket, addr = self.listen_port.accept()
             socket.settimeout(3)
             host = addr[0]
-            message = socket.recv(256).decode('ascii')
             try:
+                message = socket.recv(256).decode('ascii')
+
                 if message == "ping":
                     # recibe el ping y manda ok para atras para decir que esta disponible
                     socket.send(b"ok")
@@ -161,7 +162,7 @@ class Bully:
                     self.remove_from_leader(host)
                     socket.send(b"ok")
 
-            except (TimeoutError):
+            except (TimeoutError, OSError):
                 pass
             finally:
                 socket.close()

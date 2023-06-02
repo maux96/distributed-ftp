@@ -70,7 +70,7 @@ class Coordinator:
                         # esto nunca deberia de pasar :D
                         pass
                     
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, OSError):
                 pass
             pass
 
