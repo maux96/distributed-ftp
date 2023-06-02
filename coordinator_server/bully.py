@@ -16,7 +16,7 @@ class Bully:
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
         self.leader_host = None
         self.leaders_group = []
-        self.sinc = Sinc(coordinator, self, DEFAULT_LISTENING_PORT)
+        self.sinc = Sinc(coordinator, self, Bully.DEFAULT_LISTENING_PORT)
 
     def is_in_k_best_aviables(self, k):
         '''Enviar sennal a los superiores y devuelve si esta entre los k mejores activos'''
@@ -47,7 +47,7 @@ class Bully:
 
     def send_election(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
-        logging.info(str(self.coordinator.id) + ": init selection process ")
+        logging.info(str(self.coordinator.host) + ": init selection process ")
 
         if (not self.is_in_k_best_aviables(1)):
             return
@@ -56,7 +56,7 @@ class Bully:
         self.coordinator.accepting_connections = True
         self.leader_host = self.coordinator.host
         self.leaders_group = [self.leader_host]
-        logging.info(str(self.coordinator.id) + ": I'm the leader")
+        logging.info(str(self.coordinator.host) + ": I'm the leader")
 
         coordinators = self.coordinator.available_coordinator
         for id, (host, port) in coordinators.items():
@@ -75,7 +75,7 @@ class Bully:
 
     def send_election_for_leader_group(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
-        logging.info(str(self.coordinator.id) + ": init selection process ")
+        logging.info(str(self.coordinator.host) + ": init selection process ")
 
         socket = utils.connect_socket_to(
             self.leader_host, Bully.DEFAULT_LISTENING_PORT)
@@ -94,12 +94,12 @@ class Bully:
             try:
                 socket.settimeout(3)
                 socket.send(b"leader_group")
-                logging.info(str(self.coordinator.id) + ": I'm in the leader group")
+                logging.info(str(self.coordinator.host) + ": I'm in the leader group")
             finally:
                 socket.close()
 
     def ping(self, host):
-        logging.info(str(self.coordinator.id) + ": ping to " + host)
+        logging.info(str(self.coordinator.host) + ": ping to " + host)
 
         if host is None:
             return False
@@ -112,7 +112,7 @@ class Bully:
             socket.send(b"ping")
             is_ok = socket.recv(64)
             if (is_ok == b"ok"):
-                logging.info(str(self.coordinator.id) +
+                logging.info(str(self.coordinator.host) +
                              ": recieve ping 'ok' from " + str(host))
                 return True
             else:
@@ -167,10 +167,10 @@ class Bully:
                 socket.close()
 
     def loop_ping(self):
-        logging.info(str(self.coordinator.id) + ": loop ping init ")
+        logging.info(str(self.coordinator.host) + ": loop ping init ")
         while True:
             if self.leader:
-                logging.info(str(self.coordinator.id) + ": the leader_group es "+ str(leaders_group))
+                logging.info(str(self.coordinator.host) + ": the leader_group es "+ str(self.leaders_group))
                 self.send_election()
             else:
                 if not self.ping(self.leader_host):
@@ -182,21 +182,21 @@ class Bully:
     def add_to_leader(self, host):
         if (host not in self.leaders_group):
             self.leaders_group.remove(host)
-            logging.info(str(self.coordinator.id) + ": the leader "+ host +" has been append from group")
+            logging.info(str(self.coordinator.host) + ": the leader "+ host +" has been append from group")
 
     def remove_from_leader(self, host):
         if host in self.leaders_group:
             self.leaders_group.remove(host)
-            logging.info(str(self.coordinator.id) + ": the leader "+ host +" has been remove from group")
+            logging.info(str(self.coordinator.host) + ": the leader "+ host +" has been remove from group")
 
     def set_leader(self, host):
         self.leader_host = host
         if self.coordinator.host == host:
             self.leader = True
         else:
-            logging.info(str(self.coordinator.id) +
+            logging.info(str(self.coordinator.host) +
                          ": My leader is " + str(host))
-            logging.info(str(self.coordinator.id) +
+            logging.info(str(self.coordinator.host) +
                          ": I'm not the leader now")
             self.leader = False
             self.accepting_connections = False
