@@ -170,12 +170,14 @@ class Coordinator:
     def _consume_command_to_replicate(self,):
         log_index, ftp_id = self.operations_to_do.get()
 
-        ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
-        original_ftp_with_data,request=self.operations_log[log_index]
 
         if ftp_id not in self.available_ftp:
             logging.debug("The ftp is not available, thats why you cant send it the new data")
             return
+
+        ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
+        original_ftp_with_data,request=self.operations_log[log_index]
+
 
         if ftp_id == original_ftp_with_data:
             #si es el mismo ftp que mando la operacion,
