@@ -12,7 +12,6 @@ from .response import send_control_response
 from .context import Context
 
 import utils
-from ns_utils import ns_lookup_prefix
 
 class FTPConfiguration(TypedDict):
     id: str
@@ -33,6 +32,7 @@ class FTP:
         self.write_operations = Queue()
         self.write_operations_done = set() 
         self.current_coordinator = None
+        self.co_coordinators = [] 
         self.last_write_command_id = 0
 
     def set_coordinator(self, coordinator_dir):
@@ -64,6 +64,21 @@ class FTP:
                         if soc.recv(1024).decode() == 'OK':
                             logging.debug('COMUNICATION WITH COORDINATOR DONE')
                             self.write_operations.get()
+
+
+                            # ademas, mandamos a los co-coordinadores el comando
+                            for addr in self.co_coordinators:
+                                if (c_soc:=utils.connect_socket_to(*addr)) and\
+                                    c_soc is not None:
+                                    c_soc.settimeout(3)
+                                    with c_soc:
+                                        try:
+                                            c_soc.send(operation.encode('ascii'))
+                                            c_soc.recv(1024)
+                                        except TimeoutError:
+                                            logging.debug("Failed to send to co-coordinator the operation!")
+                                            pass
+
                         else:
                             logging.debug('COMUNICATION WITH COORDINATOR FAILED')
                             self.current_coordinator = None
