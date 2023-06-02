@@ -16,7 +16,7 @@ class Bully:
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
         self.leader_host = None
         self.leaders_group = []
-        self.sinc = Sinc(coordinator, self)
+        self.sinc = Sinc(coordinator, self, DEFAULT_LISTENING_PORT)
 
     def is_in_k_best_aviables(self, k):
         '''Enviar sennal a los superiores y devuelve si esta entre los k mejores activos'''

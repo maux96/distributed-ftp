@@ -1,9 +1,9 @@
 import logging
 import utils
-from .bully import Bully
 
 class Sinc:
-    def __init__(self, coordinator, bully):
+    def __init__(self, coordinator, bully, host):
+        self.DEFAULT_LISTENING_PORT= host
         self.coordinator = coordinator
         self.bully = bully
 
@@ -13,7 +13,7 @@ class Sinc:
         if host is None:
             return Exception("Esta tratando de sincronizar desde un host None")
 
-        socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+        socket = utils.connect_socket_to(host, self.DEFAULT_LISTENING_PORT)
         if socket is None:
             return Exception("Esta tratando de sincronizar desde un socket None")
         try:
@@ -32,7 +32,7 @@ class Sinc:
         if host is None:
             return Exception("Esta tratando de sincronizar hacia un host None")
 
-        socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+        socket = utils.connect_socket_to(host, self.DEFAULT_LISTENING_PORT)
         if socket is None:
             return Exception("Esta tratando de sincronizar hacia un socket None")
         try:
@@ -51,7 +51,7 @@ class Sinc:
         if host is None:
             return Exception("Esta tratando de enviar informacion a un host None")
 
-        socket = utils.connect_socket_to(host, Bully.DEFAULT_LISTENING_PORT)
+        socket = utils.connect_socket_to(host, self.DEFAULT_LISTENING_PORT)
         if socket is None:
             return Exception("Esta tratando de enviar informacion con socket None")
         try:
