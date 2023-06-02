@@ -85,16 +85,16 @@ class Bully:
         logging.info(str(self.coordinator.host) +
                      ": init selection leader group process ")
 
-        socket = utils.connect_socket_to(
-            self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
-
-        if socket is None:
-            logging.info(str(self.coordinator.host) +
-                         ": selection leader socket is None ")
-            return
-
         if (not self.is_in_k_best_aviables(Bully.K_MAX_LEADERS_GROUP)):
             try:
+                socket = utils.connect_socket_to(
+                self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
+
+                if socket is None:
+                    logging.info(str(self.coordinator.host) +
+                         ": selection leader socket is None ")
+                    return
+                
                 logging.info(str(self.coordinator.host) +
                              ": try will remove from leader group")
                 
@@ -111,10 +111,19 @@ class Bully:
                 logging.warning(str(self.coordinator.host) +
                                 ": the operation removed from leader group failed: TimeoutError")
             finally:
-                socket.close()
+                if socket is not None:
+                    socket.close()
 
         else:  # if (not self.leader):
             try:
+                socket = utils.connect_socket_to(
+                self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
+
+                if socket is None:
+                    logging.info(str(self.coordinator.host) +
+                         ": selection leader socket is None ")
+                    return
+
                 logging.info(str(self.coordinator.host) +
                              ": try will append to leader group")
                
@@ -132,7 +141,8 @@ class Bully:
                                 ": the operation append to leader group failed: TimeoutError")
 
             finally:
-                socket.close()
+                if socket is not None:
+                    socket.close()
 
     def ping(self, host):
         logging.info(str(self.coordinator.host) + ": ping to " + host)
