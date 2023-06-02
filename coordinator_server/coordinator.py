@@ -61,7 +61,7 @@ class Coordinator:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.settimeout(5) 
                     s.connect(coord_addr)
-                    logging.debug(f"sending ping to {name}")
+                    #loggin.debug(f"sending ping to {name}")
                     s.send(bytes(f"{self.id} PING", encoding='ascii'))
                     
                     if s.recv(256).decode().upper() == 'OK':
@@ -70,7 +70,7 @@ class Coordinator:
                         # esto nunca deberia de pasar :D
                         pass
                     
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, OSError):
                 pass
             pass
 
@@ -84,7 +84,7 @@ class Coordinator:
         if not self.accepting_connections:
             return
 
-        logging.debug("refreshing ftp")
+        #loggin.debug("refreshing ftp")
         ftp_nodes_in_name_server: dict[str, tuple[str,int]]= self._get_avalible_nodes('ftp')
         valid_ftp: dict[str, FTPDescriptor] = {} 
         exist_changes= False 
@@ -102,7 +102,7 @@ class Coordinator:
                         s.send(f"SETCOORD {self.port}".encode('ascii'))
 
                         resp_code, last_operation, *_ =s.recv(2048).decode('ascii').split(' ')
-                        logging.debug(f"name:{name} | rs:{resp_code} | last_id:{last_operation} | last_global:{self.last_operation}")
+                        #loggin.debug(f"name:{name} | rs:{resp_code} | last_id:{last_operation} | last_global:{self.last_operation}")
 
                         if resp_code == '200':
                             last_operation = int(last_operation)
@@ -118,7 +118,7 @@ class Coordinator:
 
                             if name not in self.available_ftp:
                                 exist_changes = True 
-                                logging.info(f'New ftp server {name}::{ftp_addr}')
+                                #logging.info(f'New ftp server {name}::{ftp_addr}')
                             #else:
                                 # toma el maximo entre el valor que tiene el coordinador
                                 # y el que tiene el propio ftp
@@ -135,12 +135,13 @@ class Coordinator:
                 # en caso de que no se logre conectark
                 #ns_utils.ns_remove_name(f"ftp_{name}")
                 exist_changes = True 
-                logging.info(f'{e}::Removing ftp server {name}.')
+                #logging.info(f'{e}::Removing ftp server {name}.')
                 pass
             
-        logging.debug("end refreshing with count = " +str(len(valid_ftp)))            
+        #loggin.debug("end refreshing with count = " +str(len(valid_ftp)))            
         if exist_changes:
-            logging.info(f"Total current FTPs: {len(valid_ftp)}")
+            #logging.info(f"Total current FTPs: {len(valid_ftp)}")
+            pass
         self.available_ftp = valid_ftp 
 
     def _add_operations_to_do(self, last_operation_in_ftp: int, ftp_name: str):
@@ -172,7 +173,7 @@ class Coordinator:
 
 
         if ftp_id not in self.available_ftp:
-            logging.debug("The ftp is not available, thats why you cant send it the new data")
+            #loggin.debug("The ftp is not available, thats why you cant send it the new data")
             return
 
         ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
@@ -186,7 +187,7 @@ class Coordinator:
             self.available_ftp[ftp_id]['last_operation_id']+=1
             return
 
-        logging.debug(f'replicating {request} to {ftp_id}')
+        #loggin.debug(f'replicating {request} to {ftp_id}')
         try:
             match request:
                 case ['STOR', *path]:
@@ -194,7 +195,7 @@ class Coordinator:
 
                     ftp_with_data_name = self._get_ftp_with_data(log_index)
                     if ftp_with_data_name is None:
-                        logging.debug("There is no ftp available to replicate the data")
+                        #loggin.debug("There is no ftp available to replicate the data")
                         return
 
                     remote_operations.ftp_to_ftp_copy(
@@ -207,7 +208,7 @@ class Coordinator:
                         file_path2=path
                     )
 
-                    logging.debug(f'Replication ended in {ftp_id} from {ftp_with_data_name}')  
+                    #loggin.debug(f'Replication ended in {ftp_id} from {ftp_with_data_name}')  
 
                 case ['MKD', *path]:
                     path = ' '.join(path)
@@ -224,7 +225,7 @@ class Coordinator:
         except Exception as e:
             logging.warning(f"Failed to replicate the data from {ftp_addr} to {ftp_id}!")
             print("*"*10)
-            logging.debug(e)
+            #loggin.debug(e)
             print("*"*10)
 
         self.available_ftp[ftp_id]['last_operation_id']+=1
@@ -241,7 +242,7 @@ class Coordinator:
             request[0]=request[0].upper()
             if request[0] == "PING":
                 conn.send(b'ok')
-                logging.debug(f"reciving ping from {node_id}")
+                #loggin.debug(f"reciving ping from {node_id}")
                 return 
 
             if not self.accepting_connections:
@@ -249,9 +250,9 @@ class Coordinator:
                 return 
 
 
-            logging.info(f'Saving to replicate command from {node_id}::{" ".join(request)}')
+            #logging.info(f'Saving to replicate command from {node_id}::{" ".join(request)}')
             self.new_operations.put((node_id, request))
-            logging.info(f'new_operations:{self.new_operations.queue}')
+            #logging.info(f'new_operations:{self.new_operations.queue}')
 
         except TimeoutError:
             logging.error(f"Connection Timeout {addr}")
@@ -267,7 +268,7 @@ class Coordinator:
         threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
         threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
 
-        threading.Thread(target=self.bully_protocol.recive_message,args=()).start()
+        threading.Thread(target=self.bully_protocol.receive_message,args=()).start()
         threading.Thread(target=self.bully_protocol.loop_ping,args=()).start()
 
 
@@ -275,10 +276,10 @@ class Coordinator:
             s.bind((self.host, self.port))
             s.listen() 
 
-            logging.info("Server Starting")
+            #logging.info("Server Starting")
             while True:
                 conn, addr = s.accept()
-                logging.info(f"{addr} with write operation.")
+                #logging.info(f"{addr} with write operation.")
 
                 threading.Thread(target=self._handle_conn, args=(conn,addr)).start()
 
