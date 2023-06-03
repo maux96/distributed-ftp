@@ -224,10 +224,6 @@ class Bully:
                     # quien esta mandando del otro lado del socket es el lider actual
                     self.set_leader(host, socket)
 
-                elif message.split(" ")[0] == "data_sinc":
-                    # recibe datos de sincronizacion y los procesa en la funcion proxima
-                    self.sinc.recieve_sinc(message, host)
-
                 elif message == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
                     logging.info(str(self.coordinator.host) +
@@ -300,7 +296,7 @@ class Bully:
             # logging.info(str(self.coordinator.host) +
             #              ": I'm not the leader")
             if self.leader:
-                self.sinc.set_sinc_to(socket)
+                self.sinc.send_sinc_to(socket)
 
             self.leader = False
             self.accepting_connections = False
