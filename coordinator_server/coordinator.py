@@ -2,6 +2,8 @@ import socket
 import time
 import random
 import threading
+from multiprocessing.pool import ThreadPool
+
 from queue import Queue
 
 import logging
@@ -10,6 +12,7 @@ import ns_utils
 
 from . import remote_operations 
 from . import bully
+import utils
 
 from typing import Literal, Callable, TypedDict
 
@@ -19,6 +22,7 @@ class FTPDescriptor(TypedDict):
     last_operation_id: int
 
 class Coordinator:
+    TOTAL_THREADS = 10
     def __init__(self,id , host, port, refresh_time) -> None:
         self.id = id
         self.host = host
@@ -272,19 +276,17 @@ class Coordinator:
         threading.Thread(target=self.bully_protocol.loop_ping,args=()).start()
 
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.host, self.port))
-            s.listen() 
+        if  (s:=utils.create_socket_and_listen(self.host, self.port)) and s is not None:
+            with s: 
+                logging.info("Server Starting")
+                with ThreadPool(processes=Coordinator.TOTAL_THREADS) as thread_pool:
+                    while True:
+                        conn, addr = s.accept()
+                        thread_pool.apply_async(self._handle_conn, args=(conn,addr))
+        else: 
+            logging.error(f"error creating the socket in port {self.port}.")
+            exit(1)
 
-            #logging.info("Server Starting")
-            while True:
-                conn, addr = s.accept()
-                #logging.info(f"{addr} with write operation.")
-
-                threading.Thread(target=self._handle_conn, args=(conn,addr)).start()
-
-
-        pass
     
 if __name__ == '__main__':
     pass

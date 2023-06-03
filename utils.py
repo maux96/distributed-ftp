@@ -14,7 +14,10 @@ def connect_socket_to(host, port, timeout = 5) -> socket.socket | None:
     return sock
 
 def create_socket_and_listen(host, port):
-    sock = create_tcp_socket()
-    sock.bind((host, port))
-    sock.listen()
-    return sock
+    try:
+        sock = create_tcp_socket()
+        sock.bind((host, port))
+        sock.listen()
+        return sock
+    except (ConnectionError, OSError, TimeoutError):
+        return None

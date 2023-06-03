@@ -13,9 +13,16 @@ class Bully:
         self.coordinator = coordinator
         self.leader = False
         self.sleep_time = sleep_time
-        self.listen_port = utils.create_socket_and_listen(
+
+        listen_port=utils.create_socket_and_listen(
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
-        self.leader_host = None
+        self.leader_host = None 
+        if listen_port is None:
+            logging.error(f"port used in bully protocol {Bully.DEFAULT_LISTENING_PORT} is busy!")
+            exit(1)
+        else:
+            self.listen_port = listen_port 
+
         self.leaders_group = [self.coordinator.host]
         self.sinc = Sinc(coordinator, self, Bully.DEFAULT_LISTENING_PORT)
         self.send_election()

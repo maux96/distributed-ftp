@@ -1,5 +1,7 @@
 import socket
 import threading
+from multiprocessing.pool import ThreadPool
+
 from typing import TypedDict
 from queue import Queue
 from time import sleep
@@ -22,6 +24,7 @@ class FTPConfiguration(TypedDict):
     commands: list[BaseCommand]
 
 class FTP:
+    TOTAL_THREADS = 10
     def __init__(self, config: FTPConfiguration) -> None:
         self.id = config['id']
         self.host = config['host']
@@ -127,15 +130,17 @@ class FTP:
     def run(self):
         threading.Thread(target=self.coordinator_communication,args=()).start()
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((self.host, self.port))
-            s.listen() 
-            logging.info("Server Started!")
-
-            while True:
-                conn, addr = s.accept()
-                logging.info(f'Connected with {addr}')
-                threading.Thread(target=self.start_connection,args=(conn, addr)).start()
+        if  (s:=utils.create_socket_and_listen(self.host, self.port)) and s is not None:
+            with s: 
+                logging.info("Server Started!")
+                with ThreadPool(processes=FTP.TOTAL_THREADS) as threat_pool:
+                    while True:
+                        conn, addr = s.accept()
+                        logging.info(f'Connected with {addr}')
+                        threat_pool.apply_async(self.start_connection,args=(conn, addr))
+        else: 
+            logging.error(f"error creating the socket in port {self.port}.")
+            exit(1)
 
 if __name__ =='__main__':
     pass
