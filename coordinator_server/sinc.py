@@ -18,8 +18,8 @@ class Sinc:
         self.hash = create_random_hash()
 
     def get_sinc_from(self, buffer):
-        logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer)
-        info = json.loads(buffer)
+        # logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer)
+        info = json.loads(buffer.decode())
         hash = info["hash"]
         logs = info["logs_dict"]
 
@@ -52,10 +52,7 @@ class Sinc:
                      ": sync success: \n" + str(self.logs_dict))
 
     def send_sinc_to(self, socket):
-        logging.info(str(self.coordinator.id) + ": sending info to " + host)
-
-        if host is None:
-            return Exception("Esta tratando de enviar informacion a un host None")
+        # logging.info(str(self.coordinator.id) + ": sending info to " + host)
 
         if socket is None:
             return Exception("Esta tratando de enviar informacion con socket None")
@@ -64,17 +61,20 @@ class Sinc:
                 "hash": self.hash,
                 "logs_dict": self.logs_dict
             })
-
-            socket.settimeout(3)
-            socket.send(bytes("data_sinc " + to_send, encoding='ascii'))
+            logging.debug("send:" + to_send)
+            socket.send(bytes(to_send, encoding='ascii'))
             is_ok = socket.recv(64)
             if (is_ok == b"ok"):
                 logging.info(str(self.coordinator.id) +
-                             ": send full info to " + str(host))
+                             ": send full info")
         except:
             pass
 
-    def sinc_with_leader(self, socket, buffer):
+    def sinc_with_leader(self, buffer):
         # recibir todo el puto buffer y ponerlo
         logging.info(str(self.coordinator.id) +
                      ": recieve the buffer "+buffer+" for sinc")
+        info = json.loads(buffer.decode())
+        logs = info["logs_dict"]
+        self.logs_dict = logs #TODO ver como funciona el decodificador de este json, a ver si pincha bien
+             

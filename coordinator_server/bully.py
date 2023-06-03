@@ -15,14 +15,15 @@ class Bully:
         self.in_leader_group = False
         self.sleep_time = sleep_time
 
-        listen_port=utils.create_socket_and_listen(
+        listen_port = utils.create_socket_and_listen(
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
-        self.leader_host = None 
+        self.leader_host = None
         if listen_port is None:
-            logging.error(f"port used in bully protocol {Bully.DEFAULT_LISTENING_PORT} is busy!")
+            logging.error(
+                f"port used in bully protocol {Bully.DEFAULT_LISTENING_PORT} is busy!")
             exit(1)
         else:
-            self.listen_port = listen_port 
+            self.listen_port = listen_port
 
         self.leaders_group = [self.coordinator.host]
         self.sinc = Sinc(coordinator, self, Bully.DEFAULT_LISTENING_PORT)
@@ -152,7 +153,18 @@ class Bully:
                 socket.send(b"leader_group")
                 is_ok = socket.recv(64)
                 if (is_ok == b"ok"):
-                    
+
+                    if (self.in_leader_group):
+                        socket.send(b"get_sync")
+                        try:
+                            recived_buffer = socket.recv(2048)
+                            self.sinc.sinc_with_leader(recived_buffer)
+                            socket.send(b"ok")
+                        except:
+                            logging.error(str(self.coordinator.host) + " not recived sync buffer from leader")
+
+                        return
+
                     self.in_leader_group = True
                     logging.info(str(self.coordinator.host) +
                                  ": I'm in the leader group")
@@ -220,7 +232,7 @@ class Bully:
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
                     logging.info(str(self.coordinator.host) +
                                  ": recived the peticion leader_group from " + str(host))
-                    self.add_to_leader(host)
+                    self.add_to_leader(host, socket)
                     socket.send(b"ok")
 
                 elif message == "remove_leader_group":
@@ -232,7 +244,10 @@ class Bully:
                     hash = splited[1]
                     self.hashs_dict[hash] = len(
                         self.coordinator.operations_log)
-                    pass
+                        
+                elif message == "get_sync":
+                    self.sinc.send_sinc_to(socket)
+                    socket.close()
 
             except (TimeoutError, OSError) as e:
                 logging.error("Error in receiving_message"+str(e))
