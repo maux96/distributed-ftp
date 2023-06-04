@@ -105,23 +105,25 @@ class Coordinator:
 
                         s.send(f"SETCOORD {self.port}".encode('ascii'))
                         resp_code, *_ =s.recv(2048).decode('ascii').split(' ')
-                        #loggin.debug(f"name:{name} | rs:{resp_code} | last_id:{last_operation} | last_global:{self.last_operation}")
 
 
                         if resp_code == '200':
-                            # mandamos el hash asociado al liderazgo actual
-                            #s.send(f"SETCURRENTHASH {self.bully_protocol.sinc.hash}".encode('ascii'))
-                            #resp_code,_ =s.recv(2048).decode('ascii').split(' ')
+                            # ademas mandamos los IPs de los co_coordinadores
+
+                            s.send('CLEARCOCOORD'.encode('ascii'))
+                            s.recv(126)
+                            for co_host, co_port in self.bully_protocol.leaders_group:
+                                s.send(f'ADDCOCOORD {co_host} {co_port}'.encode('ascii'))
+                                s.recv(126)
                              
+                            
                             current_ftp = FTPDescriptor(
                                 host=ftp_addr[0],
                                 port=ftp_addr[1],
                                 last_operations_id={})
                             for hash in self.bully_protocol.sinc.logs_dict:
-                                logging.debug(f">>>>> {hash}")
                                 s.send(f"LASTFROMHASH {hash}".encode('ascii'))
                                 response=s.recv(512).decode().split()
-                                logging.debug(f">>>>> {response}")
                                 _resp_code,last_operation,*_=response
 
                                 last_operation = int(last_operation)
@@ -186,9 +188,6 @@ class Coordinator:
 
         ftp_id, request =self.new_operations.get()
 
-        #self.last_operation+=1        
-        #self.operations_log.append((ftp_id, request))
-        
         self.bully_protocol\
             .sinc\
             .logs_dict\
@@ -197,7 +196,6 @@ class Coordinator:
 
 
     def _get_ftp_with_data(self, hash: str, operation_id: int):
-        # TODO EL PROBLEMA DE QUE NO PUEDA COPIAR DEBE ESTAR AQUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
         posibles= [ key for key, ftp in self.available_ftp.items()
                     if ftp['last_operations_id'].setdefault(hash,0) > operation_id ] 
         if len(posibles) > 0 :

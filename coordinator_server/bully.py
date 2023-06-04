@@ -24,7 +24,7 @@ class Bully:
         else:
             self.listen_port = listen_port
 
-        self.leaders_group = [self.coordinator.host]
+        self.leaders_group = [(self.coordinator.host, self.coordinator.port)]
         self.sinc = Sinc(coordinator, self, Bully.DEFAULT_LISTENING_PORT)
         self.send_election()
 
@@ -75,7 +75,7 @@ class Bully:
             self.leader = True
             self.coordinator.accepting_connections = True
             self.leader_host = self.coordinator.host
-            self.leaders_group = [self.leader_host]
+            self.leaders_group = [(self.leader_host, self.coordinator.port)]
             self.in_leader_group = True
 
             logging.info(str(self.coordinator.host) + ": I'm the leader")
@@ -123,7 +123,7 @@ class Bully:
                 logging.info(str(self.coordinator.host) +
                              ": try will remove from leader group")
 
-                socket.send(b"remove_leader_group")
+                socket.send(f"remove_leader_group {self.coordinator.port}".encode("ascii"))
                 is_ok = socket.recv(64)
                 if (is_ok == b"ok"):
                     self.in_leader_group = False
@@ -232,12 +232,12 @@ class Bully:
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
                     logging.info(str(self.coordinator.host) +
                                  ": recived the peticion leader_group from " + str(host))
-                    self.add_to_leader(host, socket, message.split()[1])
+                    self.add_to_leader(host, message.split()[1])
                     socket.send(b"ok")
 
-                elif message == "remove_leader_group":
+                elif message.split()[0] == "remove_leader_group":
                     # recibe el tag de que quien envia va a ser eliminado del grupo de lideres secundarios
-                    self.remove_from_leader(host)
+                    self.remove_from_leader(host, message.split()[1])
                     socket.send(b"ok")
 
                 elif message == "get_sync":
@@ -254,7 +254,7 @@ class Bully:
         while True:
             if self.leader:
 
-                for host in self.leaders_group:
+                for host,port in self.leaders_group:
                     if host != self.coordinator.host and not self.ping(host):
                         self.leaders_group.remove(host)
 
@@ -271,15 +271,15 @@ class Bully:
 
             time.sleep(self.sleep_time)
 
-    def add_to_leader(self, host, socket, port):
-        if (host not in self.leaders_group):
-            self.leaders_group.append(host)
+    def add_to_leader(self, host, port):
+        if (host,port) not in self.leaders_group:
+            self.leaders_group.append((host, port))
             logging.info(str(self.coordinator.host) + ": the leader " +
                          host + " has been append to the group")
 
-    def remove_from_leader(self, host):
-        if host in self.leaders_group:
-            self.leaders_group.remove(host)
+    def remove_from_leader(self, host, port):
+        if (host, port) in self.leaders_group:
+            self.leaders_group.remove((host, port))
             logging.info(str(self.coordinator.host) + ": the leader " +
                          host + " has been remove from the group")
 
