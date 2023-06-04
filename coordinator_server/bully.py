@@ -3,7 +3,6 @@ import time
 import logging
 from .sinc import Sinc
 
-
 class Bully:
     DEFAULT_LISTENING_PORT = 9999
     K_MAX_LEADERS_GROUP = 3
@@ -71,7 +70,7 @@ class Bully:
             logging.info(str(self.coordinator.host) + ": I'm the leader again")
         else:
             # Actualizar el hash porque se cayo un lider superior
-            self.sinc.hash = self
+            self.sinc.update_hash()
 
             self.leader = True
             self.coordinator.accepting_connections = True
@@ -91,7 +90,9 @@ class Bully:
                 try:
                     socket.send(b"leader")
                     buffer = socket.recv(2048)
-                    if (buffer is not None):
+                    logging.debug(str(self.coordinator.host) + ": recieve the buffer " + str(buffer))
+
+                    if (buffer != b"no"):
                         # si a quien envio que ahora soy lider era lider entonces hay que entrar en el proceso de sincronizacion
                         self.sinc.get_sinc_from(buffer)
 
@@ -99,6 +100,9 @@ class Bully:
                     continue
                 finally:
                     socket.close()
+
+        logging.debug("Current Hash: " + str(self.sinc.hash))
+        logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
 
     def send_election_for_leader_group(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
@@ -154,7 +158,7 @@ class Bully:
                 is_ok = socket.recv(64)
                 if (is_ok == b"ok"):
 
-                    if (self.in_leader_group):
+                    if (not self.in_leader_group):
                         socket.send(b"get_sync")
                         try:
                             recived_buffer = socket.recv(2048)
@@ -243,7 +247,6 @@ class Bully:
                         
                 elif message == "get_sync":
                     self.sinc.send_sinc_to(socket)
-                    socket.close()
 
             except (TimeoutError, OSError) as e:
                 logging.error("Error in receiving_message"+str(e))
@@ -285,7 +288,7 @@ class Bully:
             logging.info(str(self.coordinator.host) + ": the leader " +
                          host + " has been remove from the group")
 
-    def set_leader(self, host, socket=None):
+    def set_leader(self, host, socket):
         self.leader_host = host
 
         if self.coordinator.host == host:
@@ -296,7 +299,11 @@ class Bully:
             # logging.info(str(self.coordinator.host) +
             #              ": I'm not the leader")
             if self.leader:
+                logging.debug(str(self.coordinator.host) +" entro a soy lider para enviar buffer ")
                 self.sinc.send_sinc_to(socket)
-
+            else:
+                socket.send(b"no")
+                        
             self.leader = False
             self.accepting_connections = False
+

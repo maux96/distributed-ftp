@@ -18,7 +18,8 @@ class Sinc:
         self.hash = create_random_hash()
 
     def get_sinc_from(self, buffer):
-        # logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer)
+        logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer.decode())
+
         info = json.loads(buffer.decode())
         hash = info["hash"]
         logs = info["logs_dict"]
@@ -52,21 +53,24 @@ class Sinc:
                      ": sync success: \n" + str(self.logs_dict))
 
     def send_sinc_to(self, socket):
-        # logging.info(str(self.coordinator.id) + ": sending info to " + host)
+        logging.info(str(self.coordinator.id) + ": sending info to leader for sync")
 
         if socket is None:
-            return Exception("Esta tratando de enviar informacion con socket None")
+            logging.error("Esta tratando de enviar informacion con socket None")
+            return
         try:
-            to_send = json.dumps({
+            to_send = {
                 "hash": self.hash,
                 "logs_dict": self.logs_dict
-            })
-            logging.debug("send:" + to_send)
+            }
+            logging.debug("send:" + str(to_send))            
+            to_send = json.dumps(to_send)
             socket.send(bytes(to_send, encoding='ascii'))
-            is_ok = socket.recv(64)
-            if (is_ok == b"ok"):
-                logging.info(str(self.coordinator.id) +
-                             ": send full info")
+            
+            # is_ok = socket.recv(64)
+            # if (is_ok == b"ok"):
+            #     logging.info(str(self.coordinator.id) +
+            #                  ": send full info")
         except:
             pass
 
