@@ -79,6 +79,8 @@ class Sinc:
         logging.info(str(self.coordinator.id) +
                      ": recieve the buffer "+buffer+" for sinc")
         info = json.loads(buffer.decode())
+        hash = info["hash"]
         logs = info["logs_dict"]
         self.logs_dict = logs #TODO ver como funciona el decodificador de este json, a ver si pincha bien
+        self.hash = hash #TODO ver como funciona el decodificador de este json, a ver si pincha bien
              

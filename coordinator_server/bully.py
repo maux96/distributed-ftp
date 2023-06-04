@@ -153,8 +153,8 @@ class Bully:
 
                 logging.info(str(self.coordinator.host) +
                              ": try will append to leader group")
-
-                socket.send(b"leader_group")
+                
+                socket.send(f"leader_group {self.coordinator.port}".encode("ascii"))
                 is_ok = socket.recv(64)
                 if (is_ok == b"ok"):
 
@@ -228,11 +228,11 @@ class Bully:
                     # quien esta mandando del otro lado del socket es el lider actual
                     self.set_leader(host, socket)
 
-                elif message == "leader_group":
+                elif message.split()[0] == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
                     logging.info(str(self.coordinator.host) +
                                  ": recived the peticion leader_group from " + str(host))
-                    self.add_to_leader(host, socket)
+                    self.add_to_leader(host, socket, message.split()[1])
                     socket.send(b"ok")
 
                 elif message == "remove_leader_group":
@@ -271,7 +271,7 @@ class Bully:
 
             time.sleep(self.sleep_time)
 
-    def add_to_leader(self, host, socket):
+    def add_to_leader(self, host, socket, port):
         if (host not in self.leaders_group):
             self.leaders_group.append(host)
             logging.info(str(self.coordinator.host) + ": the leader " +
