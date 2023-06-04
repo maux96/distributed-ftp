@@ -53,18 +53,18 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     s2.close()
     logging.debug('ftp to ftp copy ended!')
 
-def increse_last_command(addr):
+def increse_last_command(addr, hash: str):
     if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
         with s1:
             s1.recv(2048).decode('ascii')
             login('admin', s1)
 
-            s1.send("INCRESE".encode('ascii'))
+            s1.send(f"INCRESE {hash}".encode('ascii'))
             control_response =  s1.recv(1024).decode('ascii')
-            # TODO verificar que se incremento correctamente
+
             logging.debug(f'INCRESSING | Response:{control_response}')
     else:    
-        logging.debug('failedd increse_last_command')
+        logging.debug(f'failed increse_last_command in hash {hash}')
 
 
 

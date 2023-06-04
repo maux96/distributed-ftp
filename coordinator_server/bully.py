@@ -28,7 +28,7 @@ class Bully:
         self.sinc = Sinc(coordinator, self, Bully.DEFAULT_LISTENING_PORT)
         self.send_election()
 
-        self.hashs_dict = {}
+        #self.hashs_dict = {}
 
     def is_in_k_best_aviables(self, k):
         '''Enviar sennal a los superiores y devuelve si esta entre los k mejores activos'''
@@ -240,11 +240,6 @@ class Bully:
                     self.remove_from_leader(host)
                     socket.send(b"ok")
 
-                elif (splited := message.split())[0] == "hash":
-                    hash = splited[1]
-                    self.hashs_dict[hash] = len(
-                        self.coordinator.operations_log)
-                        
                 elif message == "get_sync":
                     self.sinc.send_sinc_to(socket)
 

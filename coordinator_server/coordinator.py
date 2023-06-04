@@ -19,7 +19,7 @@ from typing import Literal, Callable, TypedDict
 class FTPDescriptor(TypedDict):
     host: str 
     port: int 
-    last_operation_id: int
+    last_operations_id: dict[str,int]
 
 class Coordinator:
     TOTAL_THREADS = 10
@@ -39,9 +39,9 @@ class Coordinator:
         self.accepting_connections = False 
 
         # operaciones realizadas
-        self.operations_log: list[tuple[str, list]] = []
-        self.base_last_opertation = 0
-        self.last_operation = 0
+        #self.operations_log: list[tuple[str, list]] = []
+        #self.base_last_opertation = 0
+        #self.last_operation = 0
 
         # protocolo de seleccion de lider bully
         self.bully_protocol = bully.Bully(self) 
@@ -104,21 +104,43 @@ class Coordinator:
                         remote_operations.login('admin', s)
 
                         s.send(f"SETCOORD {self.port}".encode('ascii'))
-
-                        resp_code, last_operation, *_ =s.recv(2048).decode('ascii').split(' ')
+                        resp_code, *_ =s.recv(2048).decode('ascii').split(' ')
                         #loggin.debug(f"name:{name} | rs:{resp_code} | last_id:{last_operation} | last_global:{self.last_operation}")
 
-                        if resp_code == '200':
-                            last_operation = int(last_operation)
 
-                            valid_ftp[name] =  FTPDescriptor(
+                        if resp_code == '200':
+                            # mandamos el hash asociado al liderazgo actual
+                            #s.send(f"SETCURRENTHASH {self.bully_protocol.sinc.hash}".encode('ascii'))
+                            #resp_code,_ =s.recv(2048).decode('ascii').split(' ')
+                             
+                            current_ftp = FTPDescriptor(
                                 host=ftp_addr[0],
                                 port=ftp_addr[1],
-                                last_operation_id=last_operation) 
+                                last_operations_id={})
+                            for hash in self.bully_protocol.sinc.logs_dict:
+                                logging.debug(f">>>>> {hash}")
+                                s.send(f"LASTFROMHASH {hash}".encode('ascii'))
+                                response=s.recv(512).decode().split()
+                                logging.debug(f">>>>> {response}")
+                                _resp_code,last_operation,*_=response
+
+                                last_operation = int(last_operation)
+                                current_ftp['last_operations_id'][hash] = last_operation 
+                                self._add_operations_to_do(last_operation, hash,ftp_name=name)
+
+                            valid_ftp[name] =  current_ftp
+
+
+                            #last_operation = int(last_operation)
+
+                           #valid_ftp[name] =  FTPDescriptor(
+                           #    host=ftp_addr[0],
+                           #    port=ftp_addr[1],
+                           #    last_operation_id=last_operation) 
 
                             # registramos las operaciones que se van a replicar
                             # basados en la ultima operacion del ftp
-                            self._add_operations_to_do(last_operation, ftp_name=name)
+                            #self._add_operations_to_do(last_operation, ftp_name=name)
 
                             if name not in self.available_ftp:
                                 exist_changes = True 
@@ -148,9 +170,9 @@ class Coordinator:
             pass
         self.available_ftp = valid_ftp 
 
-    def _add_operations_to_do(self, last_operation_in_ftp: int, ftp_name: str):
-        for index in range(last_operation_in_ftp, len(self.operations_log)):
-            self.operations_to_do.put((index, ftp_name))
+    def _add_operations_to_do(self, last_operation_in_ftp: int, hash: str ,ftp_name: str):
+        for index in range(last_operation_in_ftp, len(self.bully_protocol.sinc.logs_dict[hash])):
+            self.operations_to_do.put((index, hash, ftp_name))
         
     def _refresh_loop(self,func: Callable, wait_time: int):
         while True:
@@ -161,19 +183,25 @@ class Coordinator:
 
         ftp_id, request =self.new_operations.get()
 
-        self.last_operation+=1        
-        self.operations_log.append((ftp_id, request))
+        #self.last_operation+=1        
+        #self.operations_log.append((ftp_id, request))
+        
+        self.bully_protocol\
+            .sinc\
+            .logs_dict\
+            .setdefault(self.bully_protocol.sinc.hash,[])\
+            .append((ftp_id, request))
 
 
-    def _get_ftp_with_data(self, operation_id: int):
-        # definir una funcion de seleccion de ftp variable        
-        posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operation_id'] > operation_id ] 
+    def _get_ftp_with_data(self, hash: str, operation_id: int):
+        # TODO EL PROBLEMA DE QUE NO PUEDA COPIAR DEBE ESTAR AQUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
+        posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operations_id'][hash] > operation_id ] 
         if len(posibles) > 0 :
             return posibles[random.randint(0,len(posibles)-1)]
         return None
 
     def _consume_command_to_replicate(self,):
-        log_index, ftp_id = self.operations_to_do.get()
+        log_index, hash, ftp_id = self.operations_to_do.get()
 
 
         if ftp_id not in self.available_ftp:
@@ -181,14 +209,15 @@ class Coordinator:
             return
 
         ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
-        original_ftp_with_data,request=self.operations_log[log_index]
+        original_ftp_with_data,request=self.bully_protocol.sinc.logs_dict[hash][log_index]
 
 
         if ftp_id == original_ftp_with_data:
             #si es el mismo ftp que mando la operacion,
             #simplemente mandamos a incrementar su contador interno
-            remote_operations.increse_last_command(ftp_addr)
-            self.available_ftp[ftp_id]['last_operation_id']+=1
+            remote_operations.increse_last_command(ftp_addr, hash)
+            self.available_ftp[ftp_id]['last_operations_id'].setdefault(hash,0)
+            self.available_ftp[ftp_id]['last_operations_id'][hash]+=1
             return
 
         #loggin.debug(f'replicating {request} to {ftp_id}')
@@ -197,7 +226,7 @@ class Coordinator:
                 case ['STOR', *path]:
                     path = ' '.join(path)
 
-                    ftp_with_data_name = self._get_ftp_with_data(log_index)
+                    ftp_with_data_name = self._get_ftp_with_data(hash,log_index)
                     if ftp_with_data_name is None:
                         #loggin.debug("There is no ftp available to replicate the data")
                         return
@@ -232,8 +261,10 @@ class Coordinator:
             #loggin.debug(e)
             print("*"*10)
 
-        self.available_ftp[ftp_id]['last_operation_id']+=1
-        remote_operations.increse_last_command(ftp_addr)
+
+        self.available_ftp[ftp_id]['last_operations_id'].setdefault(hash,0)
+        self.available_ftp[ftp_id]['last_operations_id'][hash]+=1
+        remote_operations.increse_last_command(ftp_addr, hash)
 
     def _handle_conn(self, conn: socket.socket, addr):
         """ Repetir la orden a cada uno de los ftps"""

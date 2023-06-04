@@ -34,9 +34,13 @@ class FTP:
         self.available_commands= config['commands']
         self.write_operations = Queue()
         self.write_operations_done = set() 
+
         self.current_coordinator = None
+        self.current_coord_hash: str | None = None
+
         self.co_coordinators = [] 
-        self.last_write_command_id = 0
+        #self.last_write_command_id = 0
+        self.last_write_command_id: dict[str, int] = {} 
 
     def set_coordinator(self, coordinator_dir):
         self.current_coordinator = coordinator_dir 
@@ -117,6 +121,7 @@ class FTP:
                         logging.info(f'{addr}::{" ".join(args)}')
                         break
                 if not exist_command:
+                    logging.debug(f"Not implemented command {message}")
                     send_control_response(conn, 502, 'Command not implemented!')
                 pass
         except (ConnectionResetError, TimeoutError) as e:
