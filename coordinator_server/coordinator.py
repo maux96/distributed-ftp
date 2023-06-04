@@ -125,8 +125,10 @@ class Coordinator:
                                 _resp_code,last_operation,*_=response
 
                                 last_operation = int(last_operation)
-                                current_ftp['last_operations_id'][hash] = last_operation 
-                                self._add_operations_to_do(last_operation, hash,ftp_name=name)
+                                current_ftp['last_operations_id'][hash] = last_operation
+                                self._add_operations_to_do(last_operation_in_ftp=last_operation,
+                                                           hash=hash,
+                                                           ftp_name=name)
 
                             valid_ftp[name] =  current_ftp
 
@@ -171,7 +173,8 @@ class Coordinator:
         self.available_ftp = valid_ftp 
 
     def _add_operations_to_do(self, last_operation_in_ftp: int, hash: str ,ftp_name: str):
-        for index in range(last_operation_in_ftp, len(self.bully_protocol.sinc.logs_dict[hash])):
+        for index in range(last_operation_in_ftp,
+                           len(self.bully_protocol.sinc.logs_dict.setdefault(hash,[]))):
             self.operations_to_do.put((index, hash, ftp_name))
         
     def _refresh_loop(self,func: Callable, wait_time: int):
@@ -195,7 +198,8 @@ class Coordinator:
 
     def _get_ftp_with_data(self, hash: str, operation_id: int):
         # TODO EL PROBLEMA DE QUE NO PUEDA COPIAR DEBE ESTAR AQUI!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! 
-        posibles= [ key for key, ftp in self.available_ftp.items() if ftp['last_operations_id'][hash] > operation_id ] 
+        posibles= [ key for key, ftp in self.available_ftp.items()
+                    if ftp['last_operations_id'].setdefault(hash,0) > operation_id ] 
         if len(posibles) > 0 :
             return posibles[random.randint(0,len(posibles)-1)]
         return None
@@ -228,7 +232,7 @@ class Coordinator:
 
                     ftp_with_data_name = self._get_ftp_with_data(hash,log_index)
                     if ftp_with_data_name is None:
-                        #loggin.debug("There is no ftp available to replicate the data")
+                        logging.debug("There is no ftp available to replicate the data")
                         return
 
                     remote_operations.ftp_to_ftp_copy(
@@ -258,7 +262,7 @@ class Coordinator:
         except Exception as e:
             logging.warning(f"Failed to replicate the data from {ftp_addr} to {ftp_id}!")
             print("*"*10)
-            #loggin.debug(e)
+            logging.debug(e)
             print("*"*10)
 
 
