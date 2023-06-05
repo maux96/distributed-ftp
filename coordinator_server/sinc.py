@@ -1,76 +1,83 @@
 import logging
+import json
+import random
+
 import utils
 
+def create_random_hash():
+    return random.randint(5_000, 1_000_000_000)
 class Sinc:
     def __init__(self, coordinator, bully, host):
-        self.DEFAULT_LISTENING_PORT= host
+        self.DEFAULT_LISTENING_PORT = host
         self.coordinator = coordinator
         self.bully = bully
+        self.logs_dict = {}
+        self.hash = create_random_hash()
 
-    def get_sinc_from_coord(self, host):
-        logging.info(str(self.coordinator.id) + ": sinc from " + host)
+    def update_hash(self):
+        self.hash = create_random_hash()
 
-        if host is None:
-            return Exception("Esta tratando de sincronizar desde un host None")
+    def get_sinc_from(self, buffer):
+        logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer.decode())
 
-        socket = utils.connect_socket_to(host, self.DEFAULT_LISTENING_PORT)
+        info = json.loads(buffer.decode())
+        hash = info["hash"]
+        logs = info["logs_dict"]
+
+        merge = False
+        for log in logs:
+            if log not in self.logs_dict:
+                self.logs_dict[log] = logs[log]
+
+            if len(self.logs_dict[log]) != len(logs[log]):
+                if len(self.logs_dict[log]) < len(logs[log]):
+                    self.logs_dict[log] = logs[log]
+                else:
+                    # Si el log del nuevo lider es mayor que el viejo, este lider estuvo trabajando por otra rama, Notese que ambos
+                    # no pueden escribir sobre el mismo hash, luego un hash solo es modificable desde una subred y nunk desde dos al
+                    # mismo tiempo
+                    merge = True
+
+        for log in self.logs_dict:
+            if log not in logs:
+                # Si el nuevo lider tiene un log que no tiene el viejo entonces se hicieron modificaciones por otra subred usando
+                # lider nuevo
+                merge = True
+
+        if not merge:
+            self.hash = hash
+        else:
+            self.update_hash()
+
+        logging.info(str(self.coordinator.id) +
+                     ": sync success: \n" + str(self.logs_dict))
+
+    def send_sinc_to(self, socket):
+        logging.info(str(self.coordinator.id) + ": sending info for sync")
+
         if socket is None:
-            return Exception("Esta tratando de sincronizar desde un socket None")
+            logging.error("Esta tratando de enviar informacion con socket None")
+            return
         try:
-            socket.settimeout(3)
-            socket.send(b"get_sinc")
-            is_ok = socket.recv(64)
-            if (is_ok == b"ok"):
-                logging.info(str(self.coordinator.id) +
-                             ": recieve sinc from " + str(host))
+            to_send = {
+                "hash": self.hash,
+                "logs_dict": self.logs_dict
+            }
+            logging.debug("send:" + str(to_send))            
+            to_send = json.dumps(to_send)
+            socket.send(bytes(to_send, encoding='ascii'))
+            
         except:
             pass
 
-    def set_sinc_to_coord(self, host):
-        logging.info(str(self.coordinator.id) + ": sinc to " + host)
-
-        if host is None:
-            return Exception("Esta tratando de sincronizar hacia un host None")
-
-        socket = utils.connect_socket_to(host, self.DEFAULT_LISTENING_PORT)
-        if socket is None:
-            return Exception("Esta tratando de sincronizar hacia un socket None")
-        try:
-            socket.settimeout(3)
-            socket.send(b"set_sinc")
-            is_ok = socket.recv(64)
-            if (is_ok == b"ok"):
-                logging.info(str(self.coordinator.id) +
-                             ": send sinc to " + str(host))
-        except:
-            pass
-
-    def send_sinc_to(self, host):
-        logging.info(str(self.coordinator.id) + ": sending info to " + host)
-
-        if host is None:
-            return Exception("Esta tratando de enviar informacion a un host None")
-
-        socket = utils.connect_socket_to(host, self.DEFAULT_LISTENING_PORT)
-        if socket is None:
-            return Exception("Esta tratando de enviar informacion con socket None")
-        try:
-            buffer = ""
-
-            socket.settimeout(3)
-            socket.send(bytes("data_sinc " + buffer, encoding='ascii'))
-            is_ok = socket.recv(64)
-            if (is_ok == b"ok"):
-                logging.info(str(self.coordinator.id) +
-                             ": send full info to " + str(host))
-        except:
-            pass
-
-    def recieve_sinc(self, message, host):
+    def sinc_with_leader(self, buffer):
         # recibir todo el puto buffer y ponerlo
         logging.info(str(self.coordinator.id) +
-                     ": recieve the buffer "+message+" for sinc from" + str(host))
-
-    def sinc_log(self, message):
-        self.coordinator.operations_log
-        
+                     ": recieve the buffer "+str(buffer)+" for sinc")
+                     
+        info = json.loads(buffer.decode())
+        hash = info["hash"]
+        logs = info["logs_dict"]
+        self.logs_dict = logs #TODO ver como funciona el decodificador de este json, a ver si pincha bien
+        self.hash = hash #TODO ver como funciona el decodificador de este json, a ver si pincha bien
+             

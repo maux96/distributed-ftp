@@ -9,7 +9,9 @@ CHANGE_STATE_COMMANDS = [
    SETCOORDCommand,
    INCRESECommand,
    CLEARCOCOORDCommand,
-   ADDCOCOORDCommand
+   ADDCOCOORDCommand,
+   SETCURRENTHASHCommand,
+   LASTFROMHASHCommand
 ]
 
 BASICS = [
