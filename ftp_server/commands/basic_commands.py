@@ -22,7 +22,7 @@ class USERCommand(BaseCommand):
     @classmethod
     def _resolve(cls,context: Context, args: list[str]):
         context.login(args[0])
-        send_control_response(context.control_connection, 230, 'Usuario Anonimo')
+        send_control_response(context.control_connection, 230, f'User {args[0]}')
 
 
 class PWDCommand(BaseCommand):

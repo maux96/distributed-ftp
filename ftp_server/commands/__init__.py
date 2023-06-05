@@ -7,6 +7,11 @@ from .change_state_commands import *
 
 CHANGE_STATE_COMMANDS = [
    SETCOORDCommand,
+   INCRESECommand,
+   CLEARCOCOORDCommand,
+   ADDCOCOORDCommand,
+   SETCURRENTHASHCommand,
+   LASTFROMHASHCommand
 ]
 
 BASICS = [

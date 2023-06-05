@@ -22,7 +22,7 @@ class Context:
         self.PORT = ftp_server.port 
         self.write_log = ftp_server.write_operations 
         self._is_die_requested = False
-        self.user_name = 'anonymous' 
+        self.user = 'anonymous' 
 
 
     @property
@@ -48,8 +48,13 @@ class Context:
 
 
     def set_coordinator(self, port: int):
-        addr,_=self.control_connection.getsockname()
-        self._ftp_server.set_coordinator((addr, port))
+        addr_peer_name,_=self.control_connection.getpeername()
+        self._ftp_server.set_coordinator((addr_peer_name, port))
+
+    def set_coord_hash(self, hash: str):
+        self._ftp_server.current_coord_hash = hash
+        pass
+
 
     def login(self, user_name: str):
         self.user = user_name
@@ -76,6 +81,13 @@ class Context:
         return ( path.is_absolute() and\
                      (self.root_path / path.relative_to('/')).is_file() ) or\
                 (self.current_absolute_os_path / path).is_file()
+
+    def get_last_write_operation_id(self,hash :str) -> int | None:
+        return self._ftp_server.last_write_command_id.setdefault(hash, 0)
+
+    def increse_last_operation(self, hash: str):
+        self._ftp_server.last_write_command_id.setdefault(hash,0)
+        self._ftp_server.last_write_command_id[hash]+=1
 
     def get_absolute_path(self, path):
         return str(self.get_os_absolute_path(path))[len(str(self.root_path)):]
