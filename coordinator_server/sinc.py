@@ -73,7 +73,8 @@ class Sinc:
     def sinc_with_leader(self, buffer):
         # recibir todo el puto buffer y ponerlo
         logging.info(str(self.coordinator.id) +
-                     ": recieve the buffer "+buffer+" for sinc")
+                     ": recieve the buffer "+str(buffer)+" for sinc")
+                     
         info = json.loads(buffer.decode())
         hash = info["hash"]
         logs = info["logs_dict"]

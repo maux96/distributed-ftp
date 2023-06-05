@@ -177,7 +177,7 @@ class Bully:
                             self.sinc.sinc_with_leader(recived_buffer)
                             #socket.send(b"ok")
                         except:
-                            logging.error(str(self.coordinator.host) + " not recived sync buffer from leader")
+                            logging.error(str(self.coordinator.host) + " sync with leader failed")
 
                         return
                     else: 
@@ -241,17 +241,22 @@ class Bully:
                 elif message.split()[0] == "leader":
                     # quien esta mandando del otro lado del socket es el lider actual
                     self.set_leader(host, socket, message.split()[1])
-                    resp=socket.recv(2048).decode('ascii')
-                    if resp == 'get_sync':
-                        logging.debug("Recibio el mensaje Get_sync de " + str(host))
-                        self.sinc.send_sinc_to(socket)
-
+                    
                 elif message.split()[0] == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
                     logging.info(str(self.coordinator.host) +
                                  ": recived the peticion leader_group from " + str(host))
                     self.add_to_leader(host, message.split()[1])
                     socket.send(b"ok")
+
+                    logging.debug("Esperando el mensaje Get_sync de " + str(host))
+                    resp=socket.recv(2048).decode('ascii')
+                    logging.debug("Recibio el mensaje "+str(resp)+" de " + str(host))
+
+                    if resp == 'get_sync':
+                        logging.debug("Recibio el mensaje Get_sync de " + str(host))
+                        self.sinc.send_sinc_to(socket)
+
 
                 elif message.split()[0] == "remove_leader_group":
                     # recibe el tag de que quien envia va a ser eliminado del grupo de lideres secundarios
