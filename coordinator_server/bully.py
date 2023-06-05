@@ -175,11 +175,13 @@ class Bully:
                             recived_buffer = socket.recv(2048)
                             logging.debug("recibe el buffer del lider: " + str(recived_buffer))
                             self.sinc.sinc_with_leader(recived_buffer)
-                            socket.send(b"ok")
+                            #socket.send(b"ok")
                         except:
                             logging.error(str(self.coordinator.host) + " not recived sync buffer from leader")
 
                         return
+                    else: 
+                        socket.send(b"no")
 
                     self.in_leader_group = True
                     logging.info(str(self.coordinator.host) +
@@ -239,6 +241,10 @@ class Bully:
                 elif message.split()[0] == "leader":
                     # quien esta mandando del otro lado del socket es el lider actual
                     self.set_leader(host, socket, message.split()[1])
+                    resp=socket.recv(2048).decode('ascii')
+                    if resp == 'get_sync':
+                        logging.debug("Recibio el mensaje Get_sync de " + str(host))
+                        self.sinc.send_sinc_to(socket)
 
                 elif message.split()[0] == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
@@ -252,13 +258,13 @@ class Bully:
                     self.remove_from_leader(host, message.split()[1])
                     socket.send(b"ok")
 
-                elif message == "get_sync":
-                    logging.debug("Recibio el mensaje Get_sync de " + str(host))
-                    self.sinc.send_sinc_to(socket)
+               #elif message == "get_sync":
+               #    logging.debug("Recibio el mensaje Get_sync de " + str(host))
+               #    self.sinc.send_sinc_to(socket)
 
             except (TimeoutError, OSError) as e:
                 logging.error("Error in receiving_message"+str(e))
-            except e:
+            except Exception as e:
                 logging.error("*Error in receiving_message "+str(e))
 
             finally:
