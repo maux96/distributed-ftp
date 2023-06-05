@@ -53,7 +53,7 @@ class Sinc:
                      ": sync success: \n" + str(self.logs_dict))
 
     def send_sinc_to(self, socket):
-        logging.info(str(self.coordinator.id) + ": sending info to leader for sync")
+        logging.info(str(self.coordinator.id) + ": sending info for sync")
 
         if socket is None:
             logging.error("Esta tratando de enviar informacion con socket None")
@@ -67,10 +67,6 @@ class Sinc:
             to_send = json.dumps(to_send)
             socket.send(bytes(to_send, encoding='ascii'))
             
-            # is_ok = socket.recv(64)
-            # if (is_ok == b"ok"):
-            #     logging.info(str(self.coordinator.id) +
-            #                  ": send full info")
         except:
             pass
 

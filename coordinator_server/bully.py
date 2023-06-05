@@ -72,6 +72,9 @@ class Bully:
             # Actualizar el hash porque se cayo un lider superior
             self.sinc.update_hash()
 
+            #TODO mandar a que todos los del grupo de lider dejen de serlo xq se puede quedar uno con eso activado y creer para si
+            #mismo que pertenece al grupo
+
             self.leader = True
             self.coordinator.accepting_connections = True
             self.leader_host = self.coordinator.host
@@ -88,7 +91,14 @@ class Bully:
                 if socket is None:
                     continue
                 try:
-                    socket.send(b"leader")
+                    #True o falso indica si a quien le estoy enviando es o no coolider, en caso de serlo no pasa nada, si no lo es entonces debe hacer falsa la variable que lo hace coolider
+
+                    hosts = [host_ for host_,_ in self.leaders_group]
+                    if host in hosts:
+                        socket.send(b"leader True")
+                    else:
+                        socket.send(b"leader False")
+
                     buffer = socket.recv(2048)
                     logging.debug(str(self.coordinator.host) + ": recieve the buffer " + str(buffer))
 
@@ -141,7 +151,8 @@ class Bully:
                     socket.close()
 
         else:  # if (not self.leader):
-
+            logging.debug("Current Hash: " + str(self.sinc.hash))
+            logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
             try:
                 socket = utils.connect_socket_to(
                     self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
@@ -162,6 +173,7 @@ class Bully:
                         socket.send(b"get_sync")
                         try:
                             recived_buffer = socket.recv(2048)
+                            logging.debug("recibe el buffer del lider: " + str(recived_buffer))
                             self.sinc.sinc_with_leader(recived_buffer)
                             socket.send(b"ok")
                         except:
@@ -224,9 +236,9 @@ class Bully:
                     # Dice que esta disponible y quien le pregunto entonces no puede ser lider
                     socket.send(b"ok")
 
-                elif message == "leader":
+                elif message.split()[0] == "leader":
                     # quien esta mandando del otro lado del socket es el lider actual
-                    self.set_leader(host, socket)
+                    self.set_leader(host, socket, message.split()[1])
 
                 elif message.split()[0] == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
@@ -241,10 +253,13 @@ class Bully:
                     socket.send(b"ok")
 
                 elif message == "get_sync":
+                    logging.debug("Recibio el mensaje Get_sync de " + str(host))
                     self.sinc.send_sinc_to(socket)
 
             except (TimeoutError, OSError) as e:
                 logging.error("Error in receiving_message"+str(e))
+            except e:
+                logging.error("*Error in receiving_message "+str(e))
 
             finally:
                 socket.close()
@@ -256,7 +271,7 @@ class Bully:
 
                 for host,port in self.leaders_group:
                     if host != self.coordinator.host and not self.ping(host):
-                        self.leaders_group.remove(host)
+                        self.leaders_group.remove((host,port))
 
                 logging.info(str(self.coordinator.host) +
                              ": the leader_group es " + str(self.leaders_group))
@@ -283,7 +298,7 @@ class Bully:
             logging.info(str(self.coordinator.host) + ": the leader " +
                          host + " has been remove from the group")
 
-    def set_leader(self, host, socket):
+    def set_leader(self, host, socket, cooleader):
         self.leader_host = host
 
         if self.coordinator.host == host:
@@ -301,4 +316,6 @@ class Bully:
                         
             self.leader = False
             self.accepting_connections = False
-
+            if cooleader == "False":
+                #Si hay un lider nuevo entonces en un primer momento solo ese lider pertenece al grupo de lideres
+                self.in_leader_group = False
