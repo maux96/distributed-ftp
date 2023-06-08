@@ -111,8 +111,8 @@ class Bully:
                 finally:
                     socket.close()
 
-        logging.debug("Current Hash: " + str(self.sinc.hash))
-        logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
+        #logging.debug("Current Hash: " + str(self.sinc.hash))
+        #logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
 
     def send_election_for_leader_group(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''

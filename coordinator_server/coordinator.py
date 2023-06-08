@@ -38,11 +38,6 @@ class Coordinator:
         self.operations_to_do = Queue()
         self.accepting_connections = False 
 
-        # operaciones realizadas
-        #self.operations_log: list[tuple[str, list]] = []
-        #self.base_last_opertation = 0
-        #self.last_operation = 0
-
         # protocolo de seleccion de lider bully
         self.bully_protocol = bully.Bully(self) 
 
@@ -85,6 +80,11 @@ class Coordinator:
         Toma todos los servidores ftp en el servidor de nombres y comprueba conectividad
         ,filtra los validos y los guarda y manda a elminar los invalidos en el ns. 
         """
+
+        logging.debug("Current Hash: " + str(self.bully_protocol.sinc.hash))
+        logging.debug(f"Hash Table Operations: { { key:len(value) for key, value in  self.bully_protocol.sinc.logs_dict.items()} }")
+
+
         if not self.accepting_connections:
             return
 
@@ -134,45 +134,24 @@ class Coordinator:
 
                             valid_ftp[name] =  current_ftp
 
-
-                            #last_operation = int(last_operation)
-
-                           #valid_ftp[name] =  FTPDescriptor(
-                           #    host=ftp_addr[0],
-                           #    port=ftp_addr[1],
-                           #    last_operation_id=last_operation) 
-
-                            # registramos las operaciones que se van a replicar
-                            # basados en la ultima operacion del ftp
-                            #self._add_operations_to_do(last_operation, ftp_name=name)
-
                             if name not in self.available_ftp:
                                 exist_changes = True 
-                                #logging.info(f'New ftp server {name}::{ftp_addr}')
-                            #else:
-                                # toma el maximo entre el valor que tiene el coordinador
-                                # y el que tiene el propio ftp
-                               #valid_ftp[name]['last_operation_id']=max(
-                               #    last_operation,
-                               #    self.available_ftp[name]['last_operation_id'])
-
                         else:
                             raise ConnectionError('Bad Connection')
                     else:
                         raise ConnectionError('Bad Connection')
                     s.send(b'QUIT')
             except (TimeoutError, OSError, ConnectionError) as e:
-                # en caso de que no se logre conectark
-                #ns_utils.ns_remove_name(f"ftp_{name}")
                 exist_changes = True 
-                #logging.info(f'{e}::Removing ftp server {name}.')
+                logging.info(f'{e}::Removing ftp server {name}.')
                 pass
             
-        #loggin.debug("end refreshing with count = " +str(len(valid_ftp)))            
         if exist_changes:
-            #logging.info(f"Total current FTPs: {len(valid_ftp)}")
+            logging.info(f"Total current FTPs: {len(valid_ftp)}")
             pass
+
         self.available_ftp = valid_ftp 
+        logging.debug(f"Current available FTPs:{valid_ftp}")
 
     def _add_operations_to_do(self, last_operation_in_ftp: int, hash: str ,ftp_name: str):
         for index in range(last_operation_in_ftp,
@@ -282,9 +261,9 @@ class Coordinator:
                 #loggin.debug(f"reciving ping from {node_id}")
                 return 
 
-            if not self.accepting_connections:
-                conn.send(b'CLOSED')
-                return 
+           #if not self.accepting_connections:
+           #    conn.send(b'CLOSED')
+           #    return 
 
 
             #logging.info(f'Saving to replicate command from {node_id}::{" ".join(request)}')
