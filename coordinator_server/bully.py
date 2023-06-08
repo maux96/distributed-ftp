@@ -157,9 +157,6 @@ class Bully:
         else:  # if (not self.leader):
             if self.in_leader_group:
                 return
-                
-            logging.debug("Current Hash: " + str(self.sinc.hash))
-            logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
             try:
                 socket = utils.connect_socket_to(
                     self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
@@ -289,7 +286,11 @@ class Bully:
 
     def loop_ping(self):
         logging.info(str(self.coordinator.host) + ": loop ping init ")
+
         while True:
+            logging.debug("Current Hash: " + str(self.sinc.hash))
+            logging.debug("Hash Table Operations: " + str(utils.print_logs(self.sinc.logs_dict)))
+        
             if self.leader:
 
                 for host, port in self.leaders_group:

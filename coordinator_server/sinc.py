@@ -18,7 +18,7 @@ class Sinc:
         self.hash = create_random_hash()
 
     def get_sinc_from(self, buffer):
-        logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer.decode())
+        # logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer.decode())
 
         info = json.loads(buffer.decode())
         hash = info["hash"]
@@ -53,7 +53,7 @@ class Sinc:
                      ": sync success: \n" + str(self.logs_dict))
 
     def send_sinc_to(self, socket):
-        logging.info(str(self.coordinator.id) + ": sending info for sync")
+        # logging.info(str(self.coordinator.id) + ": sending info for sync")
 
         if socket is None:
             logging.error("Esta tratando de enviar informacion con socket None")
@@ -63,7 +63,7 @@ class Sinc:
                 "hash": self.hash,
                 "logs_dict": self.logs_dict
             }
-            logging.debug("send:" + str(to_send))            
+            # logging.debug("send:" + str(to_send))            
             to_send = json.dumps(to_send)
             socket.send(bytes(to_send, encoding='ascii'))
             
@@ -72,8 +72,8 @@ class Sinc:
 
     def sinc_with_leader(self, buffer):
         # recibir todo el puto buffer y ponerlo
-        logging.info(str(self.coordinator.id) +
-                     ": recieve the buffer "+str(buffer)+" for sinc")
+        # logging.info(str(self.coordinator.id) +
+        #              ": recieve the buffer "+str(buffer)+" for sinc")
                      
         info = json.loads(buffer.decode())
         hash = info["hash"]
