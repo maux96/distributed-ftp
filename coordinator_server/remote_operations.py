@@ -43,6 +43,12 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     # sending the file
     s1.send(f'RETR {file_path1}'.encode('ascii'))
     control_response1=s1.recv(2048).decode('ascii')
+    if control_response1.split()[0] != '125':
+        logging.debug('FTPxFTPcopy | RETR operation not posible.')
+        s1.close()
+        s2.close()
+        return
+
     s2.send(f'STOR {file_path2}'.encode('ascii'))
     control_response2=s2.recv(2048).decode('ascii')
     
@@ -62,7 +68,7 @@ def increse_last_command(addr, hash: str):
             s1.send(f"INCRESE {hash}".encode('ascii'))
             control_response =  s1.recv(1024).decode('ascii')
 
-            logging.debug(f'INCRESSING | Response:{control_response}')
+            logging.debug(f'{addr} INCRESSING | Response:{control_response} ')
     else:    
         logging.debug(f'failed increse_last_command in hash {hash}')
 

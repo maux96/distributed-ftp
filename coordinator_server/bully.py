@@ -3,6 +3,7 @@ import time
 import logging
 from .sinc import Sinc
 
+
 class Bully:
     DEFAULT_LISTENING_PORT = 9999
     K_MAX_LEADERS_GROUP = 3
@@ -28,7 +29,7 @@ class Bully:
         self.sinc = Sinc(coordinator, self, Bully.DEFAULT_LISTENING_PORT)
         self.send_election()
 
-        #self.hashs_dict = {}
+        # self.hashs_dict = {}
 
     def is_in_k_best_aviables(self, k):
         '''Enviar sennal a los superiores y devuelve si esta entre los k mejores activos'''
@@ -72,8 +73,7 @@ class Bully:
             # Actualizar el hash porque se cayo un lider superior
             self.sinc.update_hash()
 
-            #TODO mandar a que todos los del grupo de lider dejen de serlo xq se puede quedar uno con eso activado y creer para si
-            #mismo que pertenece al grupo
+            # TODO mandar a que todos los del grupo de lider dejen de serlo xq se puede quedar uno con eso activado y creer para si mismo que pertenece al grupo
 
             self.leader = True
             self.coordinator.accepting_connections = True
@@ -81,7 +81,7 @@ class Bully:
             self.leaders_group = [(self.leader_host, self.coordinator.port)]
             self.in_leader_group = True
 
-            logging.info(str(self.coordinator.host) + ": I'm the leader")
+            logging.info(str(self.coordinator.host) + ": I'm the new leader")
 
         coordinators = self.coordinator.available_coordinator
         for id, (host, port) in coordinators.items():
@@ -91,16 +91,17 @@ class Bully:
                 if socket is None:
                     continue
                 try:
-                    #True o falso indica si a quien le estoy enviando es o no coolider, en caso de serlo no pasa nada, si no lo es entonces debe hacer falsa la variable que lo hace coolider
+                    # True o falso indica si a quien le estoy enviando es o no coolider, en caso de serlo no pasa nada, si no lo es entonces debe hacer falsa la variable que lo hace coolider
 
-                    hosts = [host_ for host_,_ in self.leaders_group]
+                    hosts = [host_ for host_, _ in self.leaders_group]
                     if host in hosts:
                         socket.send(b"leader True")
                     else:
                         socket.send(b"leader False")
 
                     buffer = socket.recv(2048)
-                    logging.debug(str(self.coordinator.host) + ": recieve the buffer " + str(buffer))
+                    logging.debug(str(self.coordinator.host) +
+                                  ": recieve the buffer " + str(buffer))
 
                     if (buffer != b"no"):
                         # si a quien envio que ahora soy lider era lider entonces hay que entrar en el proceso de sincronizacion
@@ -111,8 +112,8 @@ class Bully:
                 finally:
                     socket.close()
 
-        #logging.debug("Current Hash: " + str(self.sinc.hash))
-        #logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
+        # logging.debug("Current Hash: " + str(self.sinc.hash))
+        # logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
 
     def send_election_for_leader_group(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
@@ -121,6 +122,8 @@ class Bully:
 
         socket = None
         if (not self.is_in_k_best_aviables(Bully.K_MAX_LEADERS_GROUP)):
+            if not self.in_leader_group:
+                return
             try:
                 socket = utils.connect_socket_to(
                     self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
@@ -133,7 +136,8 @@ class Bully:
                 logging.info(str(self.coordinator.host) +
                              ": try will remove from leader group")
 
-                socket.send(f"remove_leader_group {self.coordinator.port}".encode("ascii"))
+                socket.send(
+                    f"remove_leader_group {self.coordinator.port}".encode("ascii"))
                 is_ok = socket.recv(64)
                 if (is_ok == b"ok"):
                     self.in_leader_group = False
@@ -151,8 +155,8 @@ class Bully:
                     socket.close()
 
         else:  # if (not self.leader):
-            logging.debug("Current Hash: " + str(self.sinc.hash))
-            logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
+            if self.in_leader_group:
+                return
             try:
                 socket = utils.connect_socket_to(
                     self.leader_host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
@@ -164,8 +168,9 @@ class Bully:
 
                 logging.info(str(self.coordinator.host) +
                              ": try will append to leader group")
-                
-                socket.send(f"leader_group {self.coordinator.port}".encode("ascii"))
+
+                socket.send(
+                    f"leader_group {self.coordinator.port}".encode("ascii"))
                 is_ok = socket.recv(64)
                 if (is_ok == b"ok"):
 
@@ -173,14 +178,16 @@ class Bully:
                         socket.send(b"get_sync")
                         try:
                             recived_buffer = socket.recv(2048)
-                            logging.debug("recibe el buffer del lider: " + str(recived_buffer))
+                            logging.debug(
+                                "recibe el buffer del lider: " + str(recived_buffer))
                             self.sinc.sinc_with_leader(recived_buffer)
-                            #socket.send(b"ok")
+                            # socket.send(b"ok")
                         except:
-                            logging.error(str(self.coordinator.host) + " sync with leader failed")
+                            logging.error(
+                                str(self.coordinator.host) + " sync with leader failed")
 
                         return
-                    else: 
+                    else:
                         socket.send(b"no")
 
                     self.in_leader_group = True
@@ -241,7 +248,7 @@ class Bully:
                 elif message.split()[0] == "leader":
                     # quien esta mandando del otro lado del socket es el lider actual
                     self.set_leader(host, socket, message.split()[1])
-                    
+
                 elif message.split()[0] == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
                     logging.info(str(self.coordinator.host) +
@@ -249,21 +256,23 @@ class Bully:
                     self.add_to_leader(host, message.split()[1])
                     socket.send(b"ok")
 
-                    logging.debug("Esperando el mensaje Get_sync de " + str(host))
-                    resp=socket.recv(2048).decode('ascii')
-                    logging.debug("Recibio el mensaje "+str(resp)+" de " + str(host))
+                    logging.debug(
+                        "Esperando el mensaje Get_sync de " + str(host))
+                    resp = socket.recv(2048).decode('ascii')
+                    logging.debug("Recibio el mensaje " +
+                                  str(resp)+" de " + str(host))
 
                     if resp == 'get_sync':
-                        logging.debug("Recibio el mensaje Get_sync de " + str(host))
+                        logging.debug(
+                            "Recibio el mensaje Get_sync de " + str(host))
                         self.sinc.send_sinc_to(socket)
-
 
                 elif message.split()[0] == "remove_leader_group":
                     # recibe el tag de que quien envia va a ser eliminado del grupo de lideres secundarios
                     self.remove_from_leader(host, message.split()[1])
                     socket.send(b"ok")
 
-               #elif message == "get_sync":
+               # elif message == "get_sync":
                #    logging.debug("Recibio el mensaje Get_sync de " + str(host))
                #    self.sinc.send_sinc_to(socket)
 
@@ -277,12 +286,16 @@ class Bully:
 
     def loop_ping(self):
         logging.info(str(self.coordinator.host) + ": loop ping init ")
+
         while True:
+            logging.debug("Current Hash: " + str(self.sinc.hash))
+            logging.debug("Hash Table Operations: " + str(utils.print_logs(self.sinc.logs_dict)))
+        
             if self.leader:
 
-                for host,port in self.leaders_group:
+                for host, port in self.leaders_group:
                     if host != self.coordinator.host and not self.ping(host):
-                        self.leaders_group.remove((host,port))
+                        self.leaders_group.remove((host, port))
 
                 logging.info(str(self.coordinator.host) +
                              ": the leader_group es " + str(self.leaders_group))
@@ -298,7 +311,7 @@ class Bully:
             time.sleep(self.sleep_time)
 
     def add_to_leader(self, host, port):
-        if (host,port) not in self.leaders_group:
+        if (host, port) not in self.leaders_group:
             self.leaders_group.append((host, port))
             logging.info(str(self.coordinator.host) + ": the leader " +
                          host + " has been append to the group")
@@ -310,23 +323,19 @@ class Bully:
                          host + " has been remove from the group")
 
     def set_leader(self, host, socket, cooleader):
-        self.leader_host = host
-
-        if self.coordinator.host == host:
-            self.leader = True
+        logging.info(str(self.coordinator.host) +
+                     ": My leader is " + str(host))
+        if self.leader:
+            logging.debug(str(self.coordinator.host) +
+                          " entro a soy lider para enviar buffer ")
+            self.sinc.send_sinc_to(socket)
         else:
-            logging.info(str(self.coordinator.host) +
-                         ": My leader is " + str(host))
-            # logging.info(str(self.coordinator.host) +
-            #              ": I'm not the leader")
-            if self.leader:
-                logging.debug(str(self.coordinator.host) +" entro a soy lider para enviar buffer ")
-                self.sinc.send_sinc_to(socket)
-            else:
-                socket.send(b"no")
-                        
-            self.leader = False
-            self.accepting_connections = False
-            if cooleader == "False":
-                #Si hay un lider nuevo entonces en un primer momento solo ese lider pertenece al grupo de lideres
-                self.in_leader_group = False
+            socket.send(b"no")
+        self.leader = False
+        self.accepting_connections = False
+
+        if cooleader == "False":
+            # Si hay un lider nuevo entonces en un primer momento solo ese lider pertenece al grupo de lideres
+            self.in_leader_group = False
+
+        self.leader_host = host

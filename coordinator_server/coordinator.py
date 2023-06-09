@@ -81,8 +81,8 @@ class Coordinator:
         ,filtra los validos y los guarda y manda a elminar los invalidos en el ns. 
         """
 
-        logging.debug("Current Hash: " + str(self.bully_protocol.sinc.hash))
-        logging.debug(f"Hash Table Operations: { { key:len(value) for key, value in  self.bully_protocol.sinc.logs_dict.items()} }")
+        #logging.debug("Current Hash: " + str(self.bully_protocol.sinc.hash))
+        #logging.debug(f"Hash Table Operations: { { key:len(value) for key, value in  self.bully_protocol.sinc.logs_dict.items()} }")
 
 
         if not self.accepting_connections:
@@ -210,6 +210,10 @@ class Coordinator:
                     ftp_with_data_name = self._get_ftp_with_data(hash,log_index)
                     if ftp_with_data_name is None:
                         logging.debug("There is no ftp available to replicate the data")
+
+                        #temporal solution
+                        self.operations_to_do = Queue()
+
                         return
 
                     remote_operations.ftp_to_ftp_copy(
