@@ -26,10 +26,12 @@ def create_socket_and_listen(host, port):
         return None
 
 
-def print_logs(logs_dict):
-    result = ""
-    for (hash, logs) in zip(logs_dict.keys(), logs_dict.values()):
+def print_logs(logs_dict: dict):
+    result = "\n"
+    for hash, logs in logs_dict.items():
         result += str(hash) + ": \n"
-        for (index, log) in zip(range(len(logs)),logs):
-            result += (str(index) + ". " + str(log[1][-1])[1:20] + "...\n")
+        for index, log in enumerate(logs):
+            # index, opertation,  
+            route = ' '.join(log[1][1:])
+            result += f"{index} - {log[1][0]} - {route[: min(len(route), 20)]} ...\n"
     return result

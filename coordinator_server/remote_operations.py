@@ -62,7 +62,7 @@ def increse_last_command(addr, hash: str):
             s1.send(f"INCRESE {hash}".encode('ascii'))
             control_response =  s1.recv(1024).decode('ascii')
 
-            logging.debug(f'INCRESSING | Response:{control_response}')
+            logging.debug(f'{addr} INCRESSING | Response:{control_response} ')
     else:    
         logging.debug(f'failed increse_last_command in hash {hash}')
 
