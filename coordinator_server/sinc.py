@@ -20,7 +20,8 @@ class Sinc:
     def get_sinc_from(self, buffer):
         # logging.info(str(self.coordinator.id) + ": sinc the buffer " + buffer.decode())
 
-        info = json.loads(buffer.decode())
+        # info = json.loads(buffer.decode())
+        info = json.loads(buffer)
         hash = info["hash"]
         logs = info["logs_dict"]
 
