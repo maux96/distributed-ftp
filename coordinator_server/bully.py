@@ -397,10 +397,12 @@ class Bully:
                     socket.send(b"no")
             elif not sender_buff:
                 socket.send(b"no")
+        
+            # Si hay un lider nuevo entonces en un primer momento solo ese lider pertenece al grupo de lideres
+            self.in_leader_group = False
+        
         elif not sender_buff:
             socket.send(b"no")
 
-            # Si hay un lider nuevo entonces en un primer momento solo ese lider pertenece al grupo de lideres
-            self.in_leader_group = False
 
         self.leader_host = host
