@@ -37,8 +37,7 @@ class Bully:
         count_sup = 0
         for id, (host, port) in coordinators.items():
             if self.coordinator.id > id:
-                # TODO aqui ver como se abre un hilo y esa talla,
-                # y luego de n segundos hacer decidir si es el jefe
+                # TODO aqui ver como se abre un hilo y esa talla, y luego de n segundos hacer decidir si es el jefe
                 socket = utils.connect_socket_to(
                     host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
                 if socket is None:
@@ -82,6 +81,7 @@ class Bully:
 
             logging.info(str(self.coordinator.host) + ": I'm the new leader")
 
+        merge_hosts = "|"
         coordinators = self.coordinator.available_coordinator
         for id, (host, port) in coordinators.items():
             if self.coordinator.id < id:
@@ -94,9 +94,9 @@ class Bully:
 
                     hosts = [host_ for host_, _ in self.leaders_group]
                     if host in hosts:
-                        socket.send(b"leader True")
+                        socket.send(f"leader True {merge_hosts}".encode())
                     else:
-                        socket.send(b"leader False")
+                        socket.send(f"leader False {merge_hosts}".encode())
 
                     buffer = socket.recv(2048)
                     logging.debug(str(self.coordinator.host) +
@@ -106,7 +106,12 @@ class Bully:
                         # si a quien envio que ahora soy lider era lider entonces hay que entrar en el proceso de sincronizacion
                         self.sinc.get_sinc_from(buffer)
 
-                    #TODO Dado que los lideres y coolideres tienen la misma informacion que se debe compartir da igual desde cual se sincronice, luego cada vez que hagamos una sincronizacion guardamos el host con el cual sincronizamos y se lo pasamos al metodo que se encarga se setear el lider, en ese metodo se revisa que si alguien es lider, o coolider y ademas no esta reconocido por este nuevo lider, entonces se le pregunta si ya se utilizo el host de su lider para sincronizar, en caso positivo no se hace nada, en caso negativo se envia un buffer para sincronizar. Hay otra opcion mas optima y es controlar eso desde este coordinador que esta dando ordenes, es mejor recibir la informacion de que se ha sincronizado aqui y asi solo se envia un host por la red, la parte mala de esto es que implica hacer esto para despues llamar la sicronizacion con el buffer. Eso implica que entre lo que se pide lo ultimo y se va despues a pedir el buffer  para sincronizar entonces se desconecte este ultimo. Esto ademas solo ocurre en los casos que se necesita hacer el merge, asi que no supone un alto costo para la red ya que es un caso especifico
+
+                    #Dado que los lideres y coolideres tienen la misma informacion que se debe compartir da igual desde cual se sincronice, luego cada vez que hagamos una sincronizacion guardamos el host con el cual sincronizamos y se lo pasamos al metodo que se encarga se setear el lider, en ese metodo se revisa que si alguien es lider, o coolider y ademas no esta reconocido por este nuevo lider, entonces se le pregunta si ya se utilizo el host de su lider para sincronizar, en caso positivo no se hace nada, en caso negativo se envia un buffer para sincronizar. Hay otra opcion mas optima y es controlar eso desde este coordinador que esta dando ordenes, es mejor recibir la informacion de que se ha sincronizado aqui y asi solo se envia un host por la red, la parte mala de esto es que implica hacer esto para despues llamar la sicronizacion con el buffer. Eso implica que entre lo que se pide lo ultimo y se va despues a pedir el buffer  para sincronizar entonces se desconecte este ultimo. Esto ademas solo ocurre en los casos que se necesita hacer el merge, asi que no supone un alto costo para la red ya que es un caso especifico
+
+                    used_host = socket.recv(2048)
+                    if used_host != b"no":
+                        merge_hosts+= used_host+"|"    
 
 
                 except (TimeoutError):
@@ -255,7 +260,8 @@ class Bully:
 
                 elif message.split()[0] == "leader":
                     # quien esta mandando del otro lado del socket es el lider actual
-                    self.set_leader(host, socket, message.split()[1])
+                    split = message.split()
+                    self.set_leader(host, socket, split[1], split[2])
 
                 elif message.split()[0] == "leader_group":
                     # recibe el tag de que quien envia va a pertencer al grupo de lideres secundarios
@@ -332,15 +338,24 @@ class Bully:
             logging.info(str(self.coordinator.host) + ": the leader " +
                          host + " has been remove from the group")
 
-    def set_leader(self, host, socket, cooleader):
+    def set_leader(self, host, socket, cooleader, used_hosts):
+        #esto es para definir si el alguien de esta subred ya ha hecho merge con el nuevo lider
+        used_hosts_array = used_hosts.split("|")
+        used_contain_leader = self.leader_host in used_hosts_array
+
         logging.info(str(self.coordinator.host) +
                      ": My leader is " + str(host))
         if self.leader:
             logging.debug(str(self.coordinator.host) +
                           " entro a soy lider para enviar buffer ")
             self.sinc.send_sinc_to(socket)
+
             #TODO aqui hay que mandar al nuevo lider que ya hice merge con el, y decirle que guarde en su diccionario en mi llave el mismo host como value, de esta forma despues se pregunta por los coolideres y solo se actualiza en caso
-        
+            if not used_contain_leader:
+                socket.send(self.leader_host.encode())
+                used_contain_leader = True
+            else:
+                socket.send(b"no")    
         else:
             socket.send(b"no")
         self.leader = False
@@ -351,7 +366,12 @@ class Bully:
                 # Si el lider actual no te cuenta como coolider entonces quiere decir que no estan sincronizados, puede entonces pedir sincronizacion a este coolider(self) en caso de que el lider viejo u otro coordinador con la misma informacion no haya sido utilizado para sincronizarse. Para ello esto se debe recibir un buffer aqui con todos los hosts que han sido utilizados para sincronizar
 
                 #TODO mandar por el socket el host de mi lider
-                pass
+                if not used_contain_leader:
+                    socket.send(self.leader_host.encode())
+                    # used_contain_leader = True
+                else:
+                    socket.send(b"no")
+
 
             # Si hay un lider nuevo entonces en un primer momento solo ese lider pertenece al grupo de lideres
             self.in_leader_group = False
