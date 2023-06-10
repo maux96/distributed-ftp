@@ -66,6 +66,7 @@ class Bully:
             # self.leader = False
             # self.coordinator.accepting_connections = False
             return
+        old_leader = self.leader
 
         if self.leader == True:
             logging.info(str(self.coordinator.host) + ": I'm the leader again")
@@ -81,7 +82,9 @@ class Bully:
 
             logging.info(str(self.coordinator.host) + ": I'm the new leader")
 
-        merge_hosts = "|"
+        # En un principio por aqui se debe enviar el lider viejo de ambos para el caso de que se cae un lider y entra uno nuevo no intente sincronizarse con un coolider de la misma subred.
+        merge_hosts = old_leader + "|"
+ 
         coordinators = self.coordinator.available_coordinator
         for id, (host, port) in coordinators.items():
             if self.coordinator.id < id:
@@ -358,6 +361,7 @@ class Bully:
                 socket.send(b"no")    
         else:
             socket.send(b"no")
+        
         self.leader = False
         self.accepting_connections = False
 
