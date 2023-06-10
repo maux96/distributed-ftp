@@ -151,7 +151,7 @@ class Coordinator:
             pass
 
         self.available_ftp = valid_ftp 
-        logging.debug(f"Current available FTPs:{valid_ftp}")
+        logging.debug(f"Current available FTPs:{utils.last_ftp_operations(valid_ftp)}")
 
     def _add_operations_to_do(self, last_operation_in_ftp: int, hash: str ,ftp_name: str):
         for index in range(last_operation_in_ftp,

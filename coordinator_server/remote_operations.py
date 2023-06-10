@@ -44,7 +44,9 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     s1.send(f'RETR {file_path1}'.encode('ascii'))
     control_response1=s1.recv(2048).decode('ascii')
     if control_response1.split()[0] != '125':
-        logging.debug('FTPxFTPcopy | RETR operation not posible.')
+        #el archivo no existe por lo que se debe haber borrado en una operacion futura.
+
+        #logging.debug('FTPxFTPcopy | RETR operation not posible. Ignoring.')
         s1.close()
         s2.close()
         return
@@ -57,7 +59,6 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
 
     s1.close()
     s2.close()
-    logging.debug('ftp to ftp copy ended!')
 
 def increse_last_command(addr, hash: str):
     if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
@@ -68,7 +69,7 @@ def increse_last_command(addr, hash: str):
             s1.send(f"INCRESE {hash}".encode('ascii'))
             control_response =  s1.recv(1024).decode('ascii')
 
-            logging.debug(f'{addr} INCRESSING | Response:{control_response} ')
+            #logging.debug(f'{addr} INCRESSING | Response:{control_response} ')
     else:    
         logging.debug(f'failed increse_last_command in hash {hash}')
 

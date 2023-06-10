@@ -1,7 +1,5 @@
 from ftp_server.server import FTP, FTPConfiguration 
 from ftp_server import commands
-from proxy import Proxy
-from analizer import Analizer
 from coordinator_server.coordinator import Coordinator  
 
 import ns_utils
@@ -53,12 +51,6 @@ if __name__ == '__main__':
             welcome_message=WELCOME_MSG,
             commands=commands.ALL
         )).run()
-
-    elif args.service == 'proxy':
-        Proxy(HOST,PORT).run()
-
-    elif args.service == 'analizer':
-        Analizer(HOST,PORT,10).run()
 
     elif args.service == 'coordinator':
         Coordinator(ID, HOST, PORT, refresh_time=10).run()
