@@ -289,7 +289,7 @@ class Bully:
 
         while True:
             logging.debug("Current Hash: " + str(self.sinc.hash))
-            logging.debug("Hash Table Operations: " + str(utils.print_logs(self.sinc.logs_dict)))
+            logging.debug("Hash Table Operations: " + str(utils.commands_logs(self.sinc.logs_dict)))
         
             if self.leader:
 
