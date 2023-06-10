@@ -33,15 +33,12 @@ class Sinc:
                 if len(self.logs_dict[log]) < len(logs[log]):
                     self.logs_dict[log] = logs[log]
                 else:
-                    # Si el log del nuevo lider es mayor que el viejo, este lider estuvo trabajando por otra rama, Notese que ambos
-                    # no pueden escribir sobre el mismo hash, luego un hash solo es modificable desde una subred y nunk desde dos al
-                    # mismo tiempo
+                    # Si el log del nuevo lider es mayor que el viejo, este lider estuvo trabajando por otra rama, Notese que ambos no pueden escribir sobre el mismo hash, luego un hash solo es modificable desde una subred y nunk desde dos al mismo tiempo
                     merge = True
 
         for log in self.logs_dict:
             if log not in logs:
-                # Si el nuevo lider tiene un log que no tiene el viejo entonces se hicieron modificaciones por otra subred usando
-                # lider nuevo
+                # Si el nuevo lider tiene un log que no tiene el viejo entonces se hicieron modificaciones por otra subred usando lider nuevo
                 merge = True
 
         if not merge:

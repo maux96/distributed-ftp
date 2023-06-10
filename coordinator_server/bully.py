@@ -62,8 +62,10 @@ class Bully:
         logging.info(str(self.coordinator.host) + ": init selection process ")
 
         if (not self.is_in_k_best_aviables(1)):
-            self.leader = False
-            self.coordinator.accepting_connections = False
+            #Las proximas lineas no son necesarias, el deja de ser lider cuando otro se lo ordena, de esta manera se puede hacer bien la sincronizacion.
+
+            # self.leader = False
+            # self.coordinator.accepting_connections = False
             return
 
         if self.leader == True:
@@ -71,8 +73,6 @@ class Bully:
         else:
             # Actualizar el hash porque se cayo un lider superior
             self.sinc.update_hash()
-
-            # TODO mandar a que todos los del grupo de lider dejen de serlo xq se puede quedar uno con eso activado y creer para si mismo que pertenece al grupo
 
             self.leader = True
             self.coordinator.accepting_connections = True
@@ -90,7 +90,7 @@ class Bully:
                 if socket is None:
                     continue
                 try:
-                    # True o falso indica si a quien le estoy enviando es o no coolider, en caso de serlo no pasa nada, si no lo es entonces debe hacer falsa la variable que lo hace coolider
+                    # True o falso indica si a quien le estoy enviando es o no coolider, en caso de serlo no pasa nada, si no lo es entonces debe hacer falsa la variable que lo hace coolider.
 
                     hosts = [host_ for host_, _ in self.leaders_group]
                     if host in hosts:
@@ -106,13 +106,13 @@ class Bully:
                         # si a quien envio que ahora soy lider era lider entonces hay que entrar en el proceso de sincronizacion
                         self.sinc.get_sinc_from(buffer)
 
+                    #TODO Dado que los lideres y coolideres tienen la misma informacion que se debe compartir da igual desde cual se sincronice, luego cada vez que hagamos una sincronizacion guardamos el host con el cual sincronizamos y se lo pasamos al metodo que se encarga se setear el lider, en ese metodo se revisa que si alguien es lider, o coolider y ademas no esta reconocido por este nuevo lider, entonces se le pregunta si ya se utilizo el host de su lider para sincronizar, en caso positivo no se hace nada, en caso negativo se envia un buffer para sincronizar. Hay otra opcion mas optima y es controlar eso desde este coordinador que esta dando ordenes, es mejor recibir la informacion de que se ha sincronizado aqui y asi solo se envia un host por la red, la parte mala de esto es que implica hacer esto para despues llamar la sicronizacion con el buffer. Eso implica que entre lo que se pide lo ultimo y se va despues a pedir el buffer  para sincronizar entonces se desconecte este ultimo. Esto ademas solo ocurre en los casos que se necesita hacer el merge, asi que no supone un alto costo para la red ya que es un caso especifico
+
+
                 except (TimeoutError):
                     continue
                 finally:
                     socket.close()
-
-        # logging.debug("Current Hash: " + str(self.sinc.hash))
-        # logging.debug("Hash Table Operations: " + str(self.sinc.logs_dict))
 
     def send_election_for_leader_group(self):
         '''Enviar peticion de liderazgo a los otros coordinadores'''
@@ -308,9 +308,11 @@ class Bully:
 
             else:
                 pin = self.ping(self.leader_host)
-                #Esto quiere decir que si el lider deja de ser lider entonces hay que hacer proceso de seleccion, dado que la entrada de un tipo nuevo que no es lider que se conecto a la red y es mejor que el lider implica que el lider deje de ser lider pero el nuevo que entra no sabe que tiene que hacer proceso de seleccion, ahora sabiendo que el lider dejo de ser lider todos deben iniciar un proceso de seleccion.
+                #Si el lider deja de ser lider entonces hay que hacer proceso de seleccion, dado que la entrada de un tipo nuevo que no es lider que se conecto a la red y es mejor que el lider implica que el lider deje de ser lider pero el nuevo que entra no sabe que tiene que hacer proceso de seleccion.
+                
+                # TODO El tipo que entra nuevo tratara de hacer ping a su lider y no lo encontrara, al pasar esto hara un proceso de eleccion y de esta forma le dice a todos que el es el nuevo lider. Luego => linea Comentada
 
-                if not pin[0] or not pin[1]:
+                if not pin[0]: #or not pin[1]:
                     self.send_election()
 
                 if not self.leader:
@@ -337,12 +339,20 @@ class Bully:
             logging.debug(str(self.coordinator.host) +
                           " entro a soy lider para enviar buffer ")
             self.sinc.send_sinc_to(socket)
+            #TODO aqui hay que mandar al nuevo lider que ya hice merge con el, y decirle que guarde en su diccionario en mi llave el mismo host como value, de esta forma despues se pregunta por los coolideres y solo se actualiza en caso
+        
         else:
             socket.send(b"no")
         self.leader = False
         self.accepting_connections = False
 
         if cooleader == "False":
+            if self.in_leader_group:
+                # Si el lider actual no te cuenta como coolider entonces quiere decir que no estan sincronizados, puede entonces pedir sincronizacion a este coolider(self) en caso de que el lider viejo u otro coordinador con la misma informacion no haya sido utilizado para sincronizarse. Para ello esto se debe recibir un buffer aqui con todos los hosts que han sido utilizados para sincronizar
+
+                #TODO mandar por el socket el host de mi lider
+                pass
+
             # Si hay un lider nuevo entonces en un primer momento solo ese lider pertenece al grupo de lideres
             self.in_leader_group = False
 
