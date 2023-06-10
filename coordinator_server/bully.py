@@ -33,7 +33,6 @@ class Bully:
 
     def is_in_k_best_aviables(self, k):
         '''Enviar sennal a los superiores y devuelve si esta entre los k mejores activos'''
-
         coordinators = self.coordinator.available_coordinator
         count_sup = 0
         for id, (host, port) in coordinators.items():
@@ -206,6 +205,7 @@ class Bully:
                     socket.close()
 
     def ping(self, host):
+        '''Devuelve si se hace ping, y de hacerse si a quien se hizo ping es o no lider, tupla de (bool,bool)'''
         logging.info(str(self.coordinator.host) + ": ping to " + host)
 
         if host is None:
@@ -219,13 +219,16 @@ class Bully:
         try:
             # socket.settimeout(Bully.TIME_OUT)
             socket.send(b"ping")
-            is_ok = socket.recv(64)
-            if (is_ok == b"ok"):
+            is_ok = socket.recv(128).decode().split()
+            if (is_ok[0] == "ok"):
                 logging.info(str(self.coordinator.host) +
                              ": recieve ping 'ok' from " + str(host))
-                return True
+                if(is_ok[1] == "leader"):
+                    return True,True
+                else:
+                    return True, False    
             else:
-                return False
+                return False, False
         except (TimeoutError, OSError):
             return False
 
@@ -239,7 +242,12 @@ class Bully:
 
                 if message == "ping":
                     # recibe el ping y manda ok para atras para decir que esta disponible
-                    socket.send(b"ok")
+                    if(self.leader == True):
+                        socket.send(b"ok leader")
+                    elif self.in_leader_group == True :
+                        socket.send(b"ok cooleader")
+                    else:
+                        socket.send(b"ok no")
 
                 elif message == "election":
                     # Dice que esta disponible y quien le pregunto entonces no puede ser lider
@@ -272,10 +280,6 @@ class Bully:
                     self.remove_from_leader(host, message.split()[1])
                     socket.send(b"ok")
 
-               # elif message == "get_sync":
-               #    logging.debug("Recibio el mensaje Get_sync de " + str(host))
-               #    self.sinc.send_sinc_to(socket)
-
             except (TimeoutError, OSError) as e:
                 logging.error("Error in receiving_message"+str(e))
             except Exception as e:
@@ -294,7 +298,8 @@ class Bully:
             if self.leader:
 
                 for host, port in self.leaders_group:
-                    if host != self.coordinator.host and not self.ping(host):
+                    pin = self.ping(self.leader_host)
+                    if host != self.coordinator.host and not pin[0]:
                         self.leaders_group.remove((host, port))
 
                 logging.info(str(self.coordinator.host) +
@@ -302,7 +307,10 @@ class Bully:
                 self.send_election()
 
             else:
-                if not self.ping(self.leader_host):
+                pin = self.ping(self.leader_host)
+                #Esto quiere decir que si el lider deja de ser lider entonces hay que hacer proceso de seleccion, dado que la entrada de un tipo nuevo que no es lider que se conecto a la red y es mejor que el lider implica que el lider deje de ser lider pero el nuevo que entra no sabe que tiene que hacer proceso de seleccion, ahora sabiendo que el lider dejo de ser lider todos deben iniciar un proceso de seleccion.
+
+                if not pin[0] or not pin[1]:
                     self.send_election()
 
                 if not self.leader:
