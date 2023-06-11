@@ -31,7 +31,7 @@ class Discoverer:
 
     def udp_listener(self):
         # broadcast messages reciver
-
+        logging.info("Starting Discoverer Broadcast Listener")
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
             udp_socket.bind((self.host,self.udp_port))
             while True: 
@@ -46,7 +46,7 @@ class Discoverer:
 
 
     def send_identify_broadcast(self):
-
+        logging.debug("Broadcasting discover message!")
         message = f"IDENTIFY {self.host} {self.reciving_port}"
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
             udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -54,10 +54,10 @@ class Discoverer:
             udp_socket.settimeout(1.0)
             udp_socket.sendto(message.encode(), ('<broadcast>', self.udp_port))
 
-            time.sleep(10) 
 
 
     def register_listener(self):
+        logging.info("Starting Discoverer Listener")
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.bind((self.host, self.reciving_port))
@@ -74,6 +74,7 @@ class Discoverer:
                     logging.warning(f"Wrong type recived by discover ({type_})")
                     continue
 
+                logging.debug(f"++{id}   ---> {addr[0]} : {port}")
                 table_to_use[id] = (addr[0],int(port))
 
                 logging.debug(f"Registered addr {table_to_use[id]} as {id}")

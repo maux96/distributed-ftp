@@ -59,6 +59,12 @@ class Coordinator:
 
         raise Exception("Wrong type of node!")
 
+    def _refresh_nodes(self):
+        self.discoverer.send_identify_broadcast()
+        time.sleep(2)
+        self._refresh_coordinator_nodes()
+        self._refresh_ftp_nodes()
+
     def _refresh_coordinator_nodes(self):
         """Toma todos los servidores coordinadores y filtra los validos"""
 
@@ -298,8 +304,10 @@ class Coordinator:
 
         self.discoverer.start_discovering()
 
-        threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
-        threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()
+       #threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
+       #threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()
+        threading.Thread(target=self._refresh_loop,args=(self._refresh_nodes, self.refresh_time)).start()
+
 
         threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
         threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
