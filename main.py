@@ -2,7 +2,6 @@ from ftp_server.server import FTP, FTPConfiguration
 from ftp_server import commands
 from coordinator_server.coordinator import Coordinator  
 
-import ns_utils
 
 import random
 import argparse
@@ -39,7 +38,7 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=int(args.logging_lvl))
 
-    ns_utils.ns_register(f"{args.service}_{ID}",HOST,PORT)
+    #ns_utils.ns_register(f"{args.service}_{ID}",HOST,PORT)
     #print(f"Server {ID} ejecutandose en {HOST}:{PORT}.")
     logging.info(f"Server {ID} ejecutandose en {HOST}:{PORT}.")
     if args.service == 'ftp':
