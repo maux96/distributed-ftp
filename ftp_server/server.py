@@ -75,7 +75,8 @@ class FTP:
 
                             # ademas, mandamos a los co-coordinadores el comando
                             for addr in self.co_coordinators:
-                                if (c_soc:=utils.connect_socket_to(*addr)) and\
+                                if  self.current_coordinator != addr and\
+                                    (c_soc:=utils.connect_socket_to(*addr)) and\
                                     c_soc is not None:
                                     c_soc.settimeout(3)
                                     with c_soc:
