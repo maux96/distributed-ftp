@@ -204,7 +204,7 @@ class Bully:
                             logging.error(
                                 str(self.coordinator.host) + " sync with leader failed")
 
-                        return
+                        # return
                     else:
                         socket.send(b"no")
 
