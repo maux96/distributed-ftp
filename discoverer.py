@@ -33,7 +33,7 @@ class Discoverer:
         # broadcast messages reciver
         logging.info("Starting Discoverer Broadcast Listener")
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-            udp_socket.bind((self.host,self.udp_port))
+            udp_socket.bind(('',self.udp_port))
             while True: 
                 message, addr=udp_socket.recvfrom(1024)
                 if addr[0] == self.host:
@@ -53,6 +53,7 @@ class Discoverer:
 
             udp_socket.settimeout(1.0)
             udp_socket.sendto(message.encode(), ('<broadcast>', self.udp_port))
+            #udp_socket.sendto(message.encode(), ('255.255.255.0', self.udp_port))
 
 
 
@@ -74,7 +75,6 @@ class Discoverer:
                     logging.warning(f"Wrong type recived by discover ({type_})")
                     continue
 
-                logging.debug(f"++{id}   ---> {addr[0]} : {port}")
                 table_to_use[id] = (addr[0],int(port))
 
                 logging.debug(f"Registered addr {table_to_use[id]} as {id}")

@@ -2,7 +2,6 @@ from ftp_server.server import FTP, FTPConfiguration
 from ftp_server import commands
 from coordinator_server.coordinator import Coordinator  
 
-import ns_utils
 
 import random
 import argparse

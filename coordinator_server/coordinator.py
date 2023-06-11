@@ -8,7 +8,6 @@ from queue import Queue
 
 import logging
 
-import ns_utils
 
 from . import remote_operations 
 from . import bully
