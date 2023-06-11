@@ -246,7 +246,7 @@ class Bully:
             else:
                 return False, False
         except (TimeoutError, OSError):
-            return False
+            return False, False
 
     def receive_message(self):
         while True:

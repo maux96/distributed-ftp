@@ -11,7 +11,7 @@ class Sinc:
         self.DEFAULT_LISTENING_PORT = host
         self.coordinator = coordinator
         self.bully = bully
-        self.logs_dict = {}
+        self.logs_dict: dict[int, list] = {}
         self.hash = create_random_hash()
 
     def update_hash(self):
