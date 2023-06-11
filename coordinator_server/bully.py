@@ -67,7 +67,7 @@ class Bully:
             #Las proximas lineas no son necesarias, el deja de ser lider cuando otro se lo ordena, de esta manera se puede hacer bien la sincronizacion.
 
             # self.leader = False
-            # self.coordinator.accepting_connections = False
+            self.coordinator.accepting_connections = False
             return
         old_leader = self.leader_host
 
@@ -125,8 +125,6 @@ class Bully:
                             used_host = socket.recv(128)
                             merge_hosts+= used_host.decode("ascii")+"|"    
                             logging.debug("used host: " + str(used_host))
-
-
 
                 except (TimeoutError):
                     continue
@@ -222,7 +220,6 @@ class Bully:
             finally:
                 if socket is not None:
                     socket.close()
-
 
     def ping(self, host):
         '''Devuelve si se hace ping, y de hacerse si a quien se hizo ping es o no lider, tupla de (bool,bool)'''
