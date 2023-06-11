@@ -39,7 +39,7 @@ class Discoverer:
                 if addr[0] == self.host:
                     continue
                 command, host, port= message.decode().split()
-                logging.debug(f"Recibed Broadcast message '{command}' from '{host}'")
+                #logging.debug(f"Recibed Broadcast message '{command}' from '{host}'")
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     sock.connect((host, int(port)))
                     sock.send(f'{self.id} {self.type} {self.port}'.encode())
@@ -77,7 +77,7 @@ class Discoverer:
 
                 table_to_use[id] = (addr[0],int(port))
 
-                logging.debug(f"Registered addr {table_to_use[id]} as {id}")
+                #logging.debug(f"Registered addr {table_to_use[id]} as {id}")
 
     def start_discovering(self):
         threading.Thread(target=self.udp_listener).start()
