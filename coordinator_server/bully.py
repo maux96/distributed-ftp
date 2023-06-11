@@ -64,8 +64,7 @@ class Bully:
         logging.info(str(self.coordinator.host) + ": init selection process ")
 
         if (not self.is_in_k_best_aviables(1)):
-            #Las proximas lineas no son necesarias, el deja de ser lider cuando otro se lo ordena, de esta manera se puede hacer bien la sincronizacion.
-
+            #La proxima linea no es necesaria, el deja de ser lider cuando otro se lo ordena, de esta manera se puede hacer bien la sincronizacion.
             # self.leader = False
             self.coordinator.accepting_connections = False
             return
@@ -226,12 +225,12 @@ class Bully:
         logging.info(str(self.coordinator.host) + ": ping to " + host)
 
         if host is None:
-            return False
+            return False, False
 
         socket = utils.connect_socket_to(
             host, Bully.DEFAULT_LISTENING_PORT, timeout=Bully.TIME_OUT)
         if socket is None:
-            return False
+            return False, False
 
         try:
             # socket.settimeout(Bully.TIME_OUT)
