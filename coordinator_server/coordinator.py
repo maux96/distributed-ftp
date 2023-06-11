@@ -12,7 +12,9 @@ import ns_utils
 
 from . import remote_operations 
 from . import bully
+
 import utils
+import discoverer
 
 from typing import Literal, Callable, TypedDict
 
@@ -24,6 +26,11 @@ class FTPDescriptor(TypedDict):
 class Coordinator:
     TOTAL_THREADS = 10
     def __init__(self,id , host, port, refresh_time) -> None:
+        self.discoverer = discoverer.Discoverer(
+            id,
+            'coordinator',
+            (host, port))
+
         self.id = id
         self.host = host
         self.port = port
@@ -44,7 +51,13 @@ class Coordinator:
     def _get_avalible_nodes(self,
                                 type: Literal['ftp', 'coordinator']
                                 ):
-        return ns_utils.ns_lookup_prefix(type)
+        #return ns_utils.ns_lookup_prefix(type)
+        if type == 'ftp':
+            return self.discoverer.ftp_table
+        elif type == 'coordinator':
+            return self.discoverer.coordinator_table
+
+        raise Exception("Wrong type of node!")
 
     def _refresh_coordinator_nodes(self):
         """Toma todos los servidores coordinadores y filtra los validos"""
@@ -282,6 +295,9 @@ class Coordinator:
             conn.close()
 
     def run(self):
+
+        self.discoverer.start_discovering()
+
         threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
         threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()
 

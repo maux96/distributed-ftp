@@ -4,24 +4,21 @@ import threading
 import time
 import logging
 
-from typing import TypedDict, Literal
-
-
-
-
-class NodeInfo(TypedDict):
-    host: str
-    port: int
-    type: Literal['ftp', 'coordinator']
+from typing import  Literal
 
 class Discoverer:
-    def __init__(self, id: str, current_node_info: NodeInfo, udp_broadcast_port=16000, reciving_port=16001) -> None:
+    def __init__(self, 
+                 id: str,
+                 type_: Literal['ftp', 'coordinator'],
+                 addr: tuple[str,int],
+                 udp_broadcast_port=16000,
+                 reciving_port=16001) -> None:
 
         # node properties
         self.id = id
-        self.host=current_node_info['host']
-        self.port=current_node_info['port']
-        self.type=current_node_info['type']
+        self.host=addr[0]
+        self.port=addr[1]
+        self.type=type_
 
         # discoverer ports
         self.udp_port=udp_broadcast_port
@@ -29,7 +26,8 @@ class Discoverer:
 
 
         # discovered nodes info
-        self.table: dict[str,NodeInfo] = {}
+        self.ftp_table: dict[str,tuple[str,int]] = {}
+        self.coordinator_table: dict[str,tuple[str,int]] = {}
 
     def udp_listener(self):
         # broadcast messages reciver
@@ -41,7 +39,7 @@ class Discoverer:
                 if addr[0] == self.host:
                     continue
                 command, host, port= message.decode().split()
-                print(f"Recibed Broadcast message '{command}' from '{host}'")
+                logging.debug(f"Recibed Broadcast message '{command}' from '{host}'")
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     sock.connect((host, int(port)))
                     sock.send(f'{self.id} {self.type} {self.port}'.encode())
@@ -67,18 +65,23 @@ class Discoverer:
             while True: 
                 conn, addr=sock.accept()
                 id,type_,port =conn.recv(1024).decode().split()
-                if type_ != 'ftp' or type_ != 'coordinator':
+                if type_ == 'ftp':
+                    table_to_use = self.ftp_table
+                elif type_ == 'coordinator':
+                    table_to_use = self.coordinator_table
+
+                else:
                     logging.warning(f"Wrong type recived by discover ({type_})")
                     continue
 
-                self.table[id] = NodeInfo( 
-                    host=addr[0],
-                    port=int(port),
-                    type=type_,
-                )
+                table_to_use[id] = (addr[0],int(port))
 
-                logging.debug(f"Registered addr {self.table[id]} as {id}")
+                logging.debug(f"Registered addr {table_to_use[id]} as {id}")
 
+    def start_discovering(self):
+        threading.Thread(target=self.udp_listener).start()
+        threading.Thread(target=self.register_listener).start()
+        logging.info("Starting Discoverer!") 
 
 #  print("Listening ports") 
 #  id, host, port = input('id:'), input('host:'), int(input('port:'))
