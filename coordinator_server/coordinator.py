@@ -8,22 +8,28 @@ from queue import Queue
 
 import logging
 
-import ns_utils
 
 from . import remote_operations 
 from . import bully
+
 import utils
+import discoverer
 
 from typing import Literal, Callable, TypedDict
 
 class FTPDescriptor(TypedDict):
     host: str 
     port: int 
-    last_operations_id: dict[str,int]
+    last_operations_id: dict[int,int]
 
 class Coordinator:
     TOTAL_THREADS = 10
     def __init__(self,id , host, port, refresh_time) -> None:
+        self.discoverer = discoverer.Discoverer(
+            id,
+            'coordinator',
+            (host, port))
+
         self.id = id
         self.host = host
         self.port = port
@@ -44,7 +50,19 @@ class Coordinator:
     def _get_avalible_nodes(self,
                                 type: Literal['ftp', 'coordinator']
                                 ):
-        return ns_utils.ns_lookup_prefix(type)
+        #return ns_utils.ns_lookup_prefix(type)
+        if type == 'ftp':
+            return self.discoverer.ftp_table
+        elif type == 'coordinator':
+            return self.discoverer.coordinator_table
+
+        raise Exception("Wrong type of node!")
+
+    def _refresh_nodes(self):
+        self.discoverer.send_identify_broadcast()
+        time.sleep(2)
+        self._refresh_coordinator_nodes()
+        self._refresh_ftp_nodes()
 
     def _refresh_coordinator_nodes(self):
         """Toma todos los servidores coordinadores y filtra los validos"""
@@ -153,7 +171,7 @@ class Coordinator:
         self.available_ftp = valid_ftp 
         logging.debug(f"Current available FTPs:{utils.last_ftp_operations(valid_ftp)}")
 
-    def _add_operations_to_do(self, last_operation_in_ftp: int, hash: str ,ftp_name: str):
+    def _add_operations_to_do(self, last_operation_in_ftp: int, hash: int ,ftp_name: str):
         for index in range(last_operation_in_ftp,
                            len(self.bully_protocol.sinc.logs_dict.setdefault(hash,[]))):
             self.operations_to_do.put((index, hash, ftp_name))
@@ -174,7 +192,7 @@ class Coordinator:
             .append((ftp_id, request))
 
 
-    def _get_ftp_with_data(self, hash: str, operation_id: int):
+    def _get_ftp_with_data(self, hash: int, operation_id: int):
         posibles= [ key for key, ftp in self.available_ftp.items()
                     if ftp['last_operations_id'].setdefault(hash,0) > operation_id ] 
         if len(posibles) > 0 :
@@ -282,8 +300,13 @@ class Coordinator:
             conn.close()
 
     def run(self):
-        threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
-        threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()
+
+        self.discoverer.start_discovering()
+
+       #threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
+       #threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()
+        threading.Thread(target=self._refresh_loop,args=(self._refresh_nodes, self.refresh_time)).start()
+
 
         threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
         threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()

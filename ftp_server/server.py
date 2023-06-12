@@ -14,6 +14,7 @@ from .response import send_control_response
 from .context import Context
 
 import utils
+import discoverer
 
 class FTPConfiguration(TypedDict):
     id: str
@@ -41,6 +42,12 @@ class FTP:
         self.co_coordinators = [] 
         #self.last_write_command_id = 0
         self.last_write_command_id: dict[str, int] = {} 
+
+
+        self.discoverer = discoverer.Discoverer(
+            self.id,
+            'ftp',
+            (self.host, self.port))
 
     def set_coordinator(self, coordinator_dir):
         self.current_coordinator = coordinator_dir 
@@ -134,6 +141,8 @@ class FTP:
             logging.info(f'Connection Closed {addr}')
 
     def run(self):
+        self.discoverer.start_discovering()
+
         threading.Thread(target=self.coordinator_communication,args=()).start()
 
         if  (s:=utils.create_socket_and_listen(self.host, self.port)) and s is not None:
