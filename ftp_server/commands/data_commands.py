@@ -175,3 +175,36 @@ class RMDCommand(BaseCommand):
             context.send_control_response(550,
                 'Requested action not taken.\
 File unavailable (e.g., file not found, no access)')
+
+class RNFRCommand(BaseCommand):
+
+    @classmethod
+    def _resolve(cls, context: Context, args: list[str]):
+        path_name =pathlib.Path(' '.join(args))
+        
+
+        if (absolute_path:=context.verify_and_get_absolute_os_path(path_name, is_dir=False)) or\
+           (absolute_path:=context.verify_and_get_absolute_os_path(path_name, is_dir=True)):
+            context.reneme_from = absolute_path
+            context.send_control_response(350,
+                'Requested file action pending further information.')
+        else:
+            context.send_control_response(450,
+                'File not found!')
+        
+
+class RNTOCommand(BaseCommand):
+    @classmethod
+    def _resolve(cls, context: Context, args: list[str]):
+        #TODO ver si puede ser un path
+        new_name =' '.join(args)
+        if context.reneme_from is not None:
+            try: 
+                context.reneme_from.rename(context.get_os_absolute_path(new_name)) 
+                context.send_control_response(250, 'Requested file action okay, completed.')
+            except:
+                context.send_control_response(553, 'Requested action not taken.')
+            finally:
+                context.reneme_from = None
+        else:
+            context.send_control_response(503, 'Bad sequence of commands.')

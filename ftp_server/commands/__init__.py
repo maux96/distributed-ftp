@@ -33,6 +33,8 @@ DATA = [
    MKDCommand,
    DELECommand,
    RMDCommand,
+   RNFRCommand,
+   RNTOCommand,
 ]
 
 NAVIGATION = [
