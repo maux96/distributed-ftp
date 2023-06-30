@@ -1,7 +1,7 @@
 from ftp_server.server import FTP, FTPConfiguration 
 from ftp_server import commands
 from coordinator_server.coordinator import Coordinator  
-
+from name_server.name_server import NameServer
 
 import random
 import argparse
@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='FTP Distribuido')
     parser.add_argument('service',
-                        choices=['ftp', 'coordinator'],
+                        choices=['ftp', 'coordinator', 'nameserver'],
                         help='Tipo de servicio a ejecutar')
 
     parser.add_argument('--id',default='DEFAULT_ID', help='El id del servidor')
@@ -53,4 +53,7 @@ if __name__ == '__main__':
 
     elif args.service == 'coordinator':
         Coordinator(ID, HOST, PORT, refresh_time=10).run()
+
+    elif args.service == 'nameserver':
+        NameServer(ID, HOST, PORT).run()
         pass
