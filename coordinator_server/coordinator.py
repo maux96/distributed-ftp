@@ -3,6 +3,7 @@ import time
 import random
 import threading
 from multiprocessing.pool import ThreadPool
+import re
 
 from queue import Queue
 
@@ -257,6 +258,14 @@ class Coordinator:
                 case ['RMD', *path]:
                     path = ' '.join(path)
                     remote_operations.delete_folder(ftp_addr,path=path)
+
+                case ['RENAME', *args]:
+                    # asumamos que esto llega sin lio
+                    path, new_name = re.findall(r"\'(.*?)\'",' '.join(args))
+                    print(path,'|||', new_name)
+                    remote_operations.rename_file(ftp_addr,
+                                                  path=path,
+                                                  new_name=new_name)
 
         except Exception as e:
             logging.warning(f"Failed to replicate the data from {ftp_addr} to {ftp_id}!")

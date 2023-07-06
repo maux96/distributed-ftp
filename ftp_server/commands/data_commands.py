@@ -202,6 +202,10 @@ class RNTOCommand(BaseCommand):
             try: 
                 context.reneme_from.rename(context.get_os_absolute_path(new_name)) 
                 context.send_control_response(250, 'Requested file action okay, completed.')
+
+                if context.user != 'admin':
+                    context.save_write_op('RENAME',
+                        f"'{context.get_absolute_path_from_os_path(context.reneme_from)}' '{context.get_absolute_path(new_name)}'") 
             except:
                 context.send_control_response(553, 'Requested action not taken.')
             finally:

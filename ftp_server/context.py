@@ -41,10 +41,12 @@ class Context:
         self.write_log.put(self._ftp_server.id+" "+value)
 
     def save_write_op(self,
-                      type_: Literal['STOR', 'MKD', 'DELE', 'RMD'],
+                      type_: Literal['STOR', 'MKD', 'DELE', 'RMD', 'RENAME'],
                       path: str ):
 
-        path=self.get_absolute_path(path)
+        if type_ != 'RENAME': 
+            path=self.get_absolute_path(path)
+
         self.save_write_operation(f"{type_} {path}")
 
 
@@ -92,6 +94,9 @@ class Context:
 
     def get_absolute_path(self, path):
         return str(self.get_os_absolute_path(path))[len(str(self.root_path)):]
+
+    def get_absolute_path_from_os_path(self, path):
+        return str(path)[len(str(self.root_path)):]
 
     def get_os_absolute_path(self, client_path: Path | str):
         """

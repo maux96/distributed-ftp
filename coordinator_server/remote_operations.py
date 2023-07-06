@@ -60,6 +60,23 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     s1.close()
     s2.close()
 
+
+def rename_file(addr: tuple[str, int], path: str | Path, new_name: str):
+    path = Path(path)
+
+    if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
+        with s1:
+            s1.recv(2048).decode('ascii')
+            login('admin', s1)
+
+            s1.send(f'RNFR {path}'.encode())
+            s1.recv(256)
+              
+            s1.send(f'RNTO {new_name}'.encode())
+            s1.recv(256)
+    else: 
+        logging.warning(f"Connection not established renaming a file to '{new_name}' in {addr}. Aborting.")
+
 def increse_last_command(addr, hash: str):
     if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
         with s1:
