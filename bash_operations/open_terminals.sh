@@ -1,6 +1,9 @@
-total_ftps=3
-total_coords=1
+total_ftps=0
+total_coords=0
 root_places=~/distributed-ftp-testing
+
+
+IP_ADDRS=$(ip addr show wlo1 | grep 'inet\b' | awk '{print $2}' | cut -d '/' -f1)
 
 while getopts ":f:c:r:h:" opt; do
   case $opt in
@@ -25,29 +28,32 @@ while getopts ":f:c:r:h:" opt; do
   esac
 done
 
-printf "opening a pyro-ns instance\n"
 printf "opening total ftps : %s\n" "$total_ftps"
 printf "opening total coordinators : %s\n" "$total_coords"
 printf "opening total root_places : %s\n" "$root_places"
 
 source ../env/bin/activate
 
-kitty sh -c "pyro5-ns" &
-pids[0]=$!
+#kitty sh -c "pyro5-ns" &
+#pids[0]=$!
+
+
+for i in $(seq $total_coords);
+do
+    kitty sh -c "python3 main.py coordinator --id coord-$IP_ADDRS-$i --host $IP_ADDRS --port 1$((i+1))001"  &
+    pids[(($total_ftps+1+$i))]=$!
+    sleep 2
+done
 
 # open ftps
 for i in $(seq $total_ftps);
 do
     mkdir $root_places/$i 2>/dev/null
-    kitty sh -c "python3 main.py ftp --id $i --port $((i+1))001 --root-dir $root_places/$i" &
+    kitty sh -c "python3 main.py ftp --id ftp-$IP_ADDRS-$i --host $IP_ADDRS  --port $((i+1))001 --root-dir $root_places/$i" &
     pids[$i]=$!
+    sleep 2
 done
 
-for i in $(seq $total_coords);
-do
-    kitty sh -c "python3 main.py coordinator --id $i"  &
-    pids[(($total_ftps+1+$i))]=$!
-done
 
 read -p "Press Enter to kill all the executed processes..."
 
