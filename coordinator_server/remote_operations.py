@@ -45,11 +45,10 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     control_response1=s1.recv(2048).decode('ascii')
     if control_response1.split()[0] != '125':
         #el archivo no existe por lo que se debe haber borrado en una operacion futura.
-
         #logging.debug('FTPxFTPcopy | RETR operation not posible. Ignoring.')
         s1.close()
         s2.close()
-        return
+        return False
 
     s2.send(f'STOR {file_path2}'.encode('ascii'))
     control_response2=s2.recv(2048).decode('ascii')
@@ -59,6 +58,8 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
 
     s1.close()
     s2.close()
+
+    return True
 
 
 def rename_file(addr: tuple[str, int], path: str | Path, new_name: str):
@@ -74,8 +75,11 @@ def rename_file(addr: tuple[str, int], path: str | Path, new_name: str):
               
             s1.send(f'RNTO {new_name}'.encode())
             s1.recv(256)
+
+            return True
     else: 
         logging.warning(f"Connection not established renaming a file to '{new_name}' in {addr}. Aborting.")
+        return False
 
 def increse_last_command(addr, hash: str):
     if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
@@ -85,10 +89,12 @@ def increse_last_command(addr, hash: str):
 
             s1.send(f"INCRESE {hash}".encode('ascii'))
             control_response =  s1.recv(1024).decode('ascii')
-
+            
+            return True
             #logging.debug(f'{addr} INCRESSING | Response:{control_response} ')
     else:    
         logging.debug(f'failed increse_last_command in hash {hash}')
+        return False
 
 
 
@@ -108,6 +114,8 @@ def create_folder(replication_addr, path: str | Path):
         # TODO comprobar que haya sido valida la creacion de la carpeta
         s1.recv(2048)
 
+        return True
+
 def delete_file(replication_addr, path: str | Path):
     path = Path(path)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s1:
@@ -123,6 +131,8 @@ def delete_file(replication_addr, path: str | Path):
 
         # TODO comprobar que haya sido valida la creacion de la carpeta
         s1.recv(2048)
+
+        return True 
     pass
 
 def delete_folder(replication_addr, path: str | Path):
@@ -140,12 +150,6 @@ def delete_folder(replication_addr, path: str | Path):
 
         # TODO comprobar que haya sido valida la creacion de la carpeta
         s1.recv(2048)
-    pass
-    pass
 
-if __name__ == '__main__':
-    if 'PORT1' not in environ and 'PORT2' not in environ:
-        raise Exception("PORT1 and PORT2 needed in environ!")
-
-    addr1 = ('0.0.0.0',int(environ['PORT1']))
-    addr2 = ('0.0.0.0',int(environ['PORT2']))
+        return True
+    pass

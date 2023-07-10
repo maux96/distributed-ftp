@@ -200,6 +200,9 @@ class RNTOCommand(BaseCommand):
         new_name =' '.join(args)
         if context.reneme_from is not None:
             try: 
+                # TODO verificar de alguna manera, que el archivo al cual se cambio el nombre
+                # este' replicado con anterioridad....
+
                 context.reneme_from.rename(context.get_os_absolute_path(new_name)) 
                 context.send_control_response(250, 'Requested file action okay, completed.')
 

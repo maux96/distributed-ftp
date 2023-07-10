@@ -49,15 +49,12 @@ class Coordinator:
         self.bully_protocol = bully.Bully(self) 
 
     def _get_avalible_nodes(self,
-                                type: Literal['ftp', 'coordinator']
+                                type_: Literal['ftp', 'coordinator']
                                 ):
-        #return ns_utils.ns_lookup_prefix(type)
-        if type == 'ftp':
-            return self.discoverer.ftp_table
-        elif type == 'coordinator':
-            return self.discoverer.coordinator_table
 
-        raise Exception("Wrong type of node!")
+        return self.discoverer.get_registered_nodes(type_)
+
+        #raise Exception("Wrong type of node!")
 
     def _refresh_nodes(self):
         self.discoverer.send_identify_broadcast()
@@ -200,6 +197,19 @@ class Coordinator:
             return posibles[random.randint(0,len(posibles)-1)]
         return None
 
+    def modify_path_tree(self, request):
+        match request: 
+            case ['STOR'|'MKD', *path]:
+                path = ' '.join(path)
+                self.ftp_tree[path] = True
+            case ['DELE'|'RMD', *path]:
+                path = ' '.join(path)
+                self.ftp_tree[path] = False
+            case ['RENAME', *args]:
+                path, new_name = re.findall(r"\'(.*?)\'",' '.join(args))
+                self.ftp_tree[path] = False
+                self.ftp_tree[new_name] = True 
+
     def _consume_command_to_replicate(self,):
         log_index, hash, ftp_id = self.operations_to_do.get()
 
@@ -218,6 +228,8 @@ class Coordinator:
             remote_operations.increse_last_command(ftp_addr, hash)
             self.available_ftp[ftp_id]['last_operations_id'].setdefault(hash,0)
             self.available_ftp[ftp_id]['last_operations_id'][hash]+=1
+
+            self.modify_path_tree(request)
             return
 
         #loggin.debug(f'replicating {request} to {ftp_id}')
@@ -235,7 +247,7 @@ class Coordinator:
 
                         return
 
-                    remote_operations.ftp_to_ftp_copy(
+                    ok=remote_operations.ftp_to_ftp_copy(
                         emiter_addr=(
                             self.available_ftp[ftp_with_data_name]['host'],
                             self.available_ftp[ftp_with_data_name]['port'],
@@ -244,6 +256,15 @@ class Coordinator:
                         file_path1=path,
                         file_path2=path
                     )
+
+                    conteining_folder_path = '/'.join(path.split('/')[:-1]) + '/'
+                    if not ok and (conteining_folder_path in self.ftp_tree) and not self.ftp_tree[conteining_folder_path]: # ver que la carpeta que lo contiene haya existido en algun momento ....
+                        # si la carpeta que lo contiene existio' en algun momento, entonces se puede     
+                        # crear la carpeta, pues probablemente, desde el punto de vista de algunos usuarios,
+                        # nunca se elimino' o renombro'
+                        pass
+
+                        
 
                     #loggin.debug(f'Replication ended in {ftp_id} from {ftp_with_data_name}')  
 
@@ -262,7 +283,6 @@ class Coordinator:
                 case ['RENAME', *args]:
                     # asumamos que esto llega sin lio
                     path, new_name = re.findall(r"\'(.*?)\'",' '.join(args))
-                    print(path,'|||', new_name)
                     remote_operations.rename_file(ftp_addr,
                                                   path=path,
                                                   new_name=new_name)
@@ -309,8 +329,9 @@ class Coordinator:
             conn.close()
 
     def run(self):
-
-        self.discoverer.start_discovering()
+        
+        if not self.discoverer.is_remote:
+            self.discoverer.start_discovering()
 
        #threading.Thread(target=self._refresh_loop,args=(self._refresh_ftp_nodes,self.refresh_time)).start()
        #threading.Thread(target=self._refresh_loop,args=(self._refresh_coordinator_nodes,self.refresh_time)).start()

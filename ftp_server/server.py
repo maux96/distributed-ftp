@@ -141,7 +141,8 @@ class FTP:
             logging.info(f'Connection Closed {addr}')
 
     def run(self):
-        self.discoverer.start_discovering()
+        if not self.discoverer.is_remote:
+            self.discoverer.start_discovering()
 
         threading.Thread(target=self.coordinator_communication,args=()).start()
 
