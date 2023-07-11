@@ -4,6 +4,7 @@ import random
 import threading
 from multiprocessing.pool import ThreadPool
 import re
+import json
 
 from queue import Queue
 
@@ -318,7 +319,7 @@ class Coordinator:
         remote_operations.increse_last_command(ftp_addr, hash)
 
     def _handle_conn(self, conn: socket.socket, addr):
-        """ Repetir la orden a cada uno de los ftps"""
+
         conn.settimeout(10)
         try:
             request=conn.recv(1024).decode('ascii')
@@ -326,24 +327,27 @@ class Coordinator:
 
             node_id = request.pop(0)
             request[0]=request[0].upper()
-            if request[0] == "PING":
-                conn.send(b'ok')
-                #loggin.debug(f"reciving ping from {node_id}")
-                return 
+            match request:
+                case ["PING", *args]:
+                    conn.send(b'ok')
+                case ["GET_TREE"]:
+                    tree_serialized=json.dumps(self.ftp_tree)
+                    conn.send(tree_serialized.encode())
+                case ["ADD_TO_TREE",port, *path]:
+                    self.ftp_tree.setdefault(" ".join(path),[]).append(addr[0], port)
 
-           #if not self.accepting_connections:
-           #    conn.send(b'CLOSED')
-           #    return 
+                case ["REMOVE_FROM_TREE", *path]:
+                    try:
+                        self.ftp_tree.pop(" ".join(path))
+                    except (KeyError):
+                        # no problemo :D
+                        pass
 
-
-            #logging.info(f'Saving to replicate command from {node_id}::{" ".join(request)}')
-            self.new_operations.put((node_id, request))
+            #self.new_operations.put((node_id, request))
             #logging.info(f'new_operations:{self.new_operations.queue}')
 
         except TimeoutError:
             logging.error(f"Connection Timeout {addr}")
-        else: 
-            conn.send(b'OK')
         finally:
             conn.close()
 

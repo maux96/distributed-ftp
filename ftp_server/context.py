@@ -37,17 +37,18 @@ class Context:
     def die(self):
         self._is_die_requested = True 
 
-    def save_write_operation(self, value):
-        self.write_log.put(self._ftp_server.id+" "+value)
+    def save_write_operation(self, values):
+        self.write_log.put(values)
 
     def save_write_op(self,
                       type_: Literal['STOR', 'MKD', 'DELE', 'RMD', 'RENAME'],
-                      path: str ):
+                      args: list[str] ):
 
         if type_ != 'RENAME': 
-            path=self.get_absolute_path(path)
+            path=self.get_absolute_path(args[0])
+            self.save_write_operation([type_, path]) 
 
-        self.save_write_operation(f"{type_} {path}")
+        self.save_write_operation([type_, args[0], args[1]])
 
 
     def set_coordinator(self, port: int):

@@ -5,7 +5,13 @@ from multiprocessing.pool import ThreadPool
 from typing import TypedDict
 from queue import Queue
 from time import sleep
+import json
 import logging
+import random
+import re
+
+from coordinator_server import coordinator
+from coordinator_server import remote_operations
 
 
 from .utils import prepare_command_args 
@@ -26,6 +32,7 @@ class FTPConfiguration(TypedDict):
 
 class FTP:
     TOTAL_THREADS = 10
+    TREE_REFRESH_TIME= 10
     def __init__(self, config: FTPConfiguration) -> None:
         self.id = config['id']
         self.host = config['host']
@@ -43,6 +50,8 @@ class FTP:
         #self.last_write_command_id = 0
         self.last_write_command_id: dict[str, int] = {} 
 
+        self.file_tree: set[str] = set() 
+        self.coordinator_tree: dict[str, list[tuple[str, int]]] = {}
 
         self.discoverer = discoverer.Discoverer(
             self.id,
@@ -52,58 +61,77 @@ class FTP:
     def set_coordinator(self, coordinator_dir):
         self.current_coordinator = coordinator_dir 
 
-    def coordinator_communication(self):
+    def operation_saver(self):
         while True:
-            logging.debug(f'Operations: {self.write_operations.queue}')
             while self.write_operations.empty():
                 sleep(1)
-            #operation=self.write_operations.get()
             operation=self.write_operations.queue[0]
             if self.current_coordinator is None: 
                 logging.warning("No coordinator available!")
-                #self.write_operations.put(operation)
                 sleep(10)
-                continue
-           
-            logging.info(f"Sending write-operation to coordinator {operation}")
-            if (soc:=utils.connect_socket_to(*self.current_coordinator)) and\
-                  soc is not None:
+                continue             
 
-                with soc:
-                # TODO ver si vale la pena esperar a una respuesta que confirme que al 
-                # menos se duplico una vez la operacion en otro nodo ftp
-                    soc.settimeout(10)
-                    try:
-                        soc.send(operation.encode('ascii'))
-                        if soc.recv(1024).decode() == 'OK':
-                            logging.debug('COMUNICATION WITH COORDINATOR DONE')
-                            self.write_operations.get()
+            match operation:
+                case ['STOR' | 'MKD', *path]:
+                    soc=utils.connect_socket_to(*self.current_coordinator)
+                    if soc is not None:
+                        soc.send(f"ADD_TO_TREE {self.port} {' '.join(path)}".encode())
+                        self.file_tree.add(" ".join(path))
+                    else: 
+                        continue
+                    
+                case ['DELE' | 'RMD',*path]:
+                    soc=utils.connect_socket_to(*self.current_coordinator)
+                    if soc is not None:
+                        soc.send(f"REMOVE_FROM_TREE {' '.join(path)}".encode())
+                        self.file_tree.remove(" ".join(path))
+                    else: 
+                        continue
+
+                case ['RENAME', *args]:
+                    from_path, to_path = re.findall(r"\'(.*?)\'",' '.join(args))
+                    soc=utils.connect_socket_to(*self.current_coordinator)
+                    
+                    if soc is not None:
+                        soc.send(f"REMOVE_FROM_TREE {' '.join(from_path)}".encode())
+                        soc.send(f"ADD_TO_TREE {' '.join(to_path)}".encode())
+                        self.file_tree.remove(from_path)
+                        self.file_tree.add(to_path)
+                    else: 
+                        continue
+
+            self.write_operations.get()
+              
+
+    def tree_refresh(self):
+
+        while True:
+            if self.current_coordinator is None: 
+                logging.warning("No coordinator available!")
+                #self.write_operations.put(operation)
+                return  
+               
+            if (soc:=utils.connect_socket_to(*self.current_coordinator)):
+                soc.send(b"GET_TREE")
+                tree=json.loads(soc.recv(2048))
+                #self.coordinator_tree = tree 
+
+                for path in self.file_tree:
+                    if path not in tree.keys():
+                        self.file_tree.remove(path)
+
+                for path, ftps in tree:
+                    if path not in self.file_tree:
+                        # TODO verificar que el ftp seleccionado esta disponible
+                        ftp_to_copy_from = ftps[random.randint(0,len(ftps)-1)]
+                        remote_operations.ftp_to_ftp_copy(
+                            ftp_to_copy_from,
+                            (self.host, self.port)
+                            ,path, path)
 
 
-                            # ademas, mandamos a los co-coordinadores el comando
-                            for addr in self.co_coordinators:
-                                if  self.current_coordinator != addr and\
-                                    (c_soc:=utils.connect_socket_to(*addr)) and\
-                                    c_soc is not None:
-                                    c_soc.settimeout(3)
-                                    with c_soc:
-                                        try:
-                                            c_soc.send(operation.encode('ascii'))
-                                            c_soc.recv(1024)
-                                        except TimeoutError:
-                                            logging.debug("Failed to send to co-coordinator the operation!")
-                                            pass
+            sleep(FTP.TREE_REFRESH_TIME)
 
-                        else:
-                            logging.debug('COMUNICATION WITH COORDINATOR FAILED')
-                            self.current_coordinator = None
-                    except TimeoutError:
-                        logging.debug('COMUNICATION WITH COORDINATOR FAILED')
-                        self.current_coordinator = None
-            else: 
-               #self.write_operations.put(operation)
-                logging.debug(f'COMUNICATION WITH COORDINATOR FAILED (TRYING TO CONNECT TO {self.current_coordinator}) ')
-                self.current_coordinator = None
 
     def start_connection(self,conn: socket.socket, addr):
         try:
@@ -144,7 +172,8 @@ class FTP:
         if not self.discoverer.is_remote:
             self.discoverer.start_discovering()
 
-        threading.Thread(target=self.coordinator_communication,args=()).start()
+        threading.Thread(target=self.tree_refresh,args=()).start()
+        threading.Thread(target=self.operation_saver,args=()).start()
 
         if  (s:=utils.create_socket_and_listen(self.host, self.port)) and s is not None:
             with s: 

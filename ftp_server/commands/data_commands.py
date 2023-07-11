@@ -98,7 +98,7 @@ class STORCommand(BaseCommand):
 
             ### TODO escribirle al coordinador que esciribio un archivo
             if context.user != 'admin' :
-                context.save_write_op('STOR'," ".join(args)) 
+                context.save_write_op('STOR',[" ".join(args)]) 
            #else: 
            #    context.increse_last_operation()
         else:
@@ -122,7 +122,7 @@ class MKDCommand(BaseCommand):
 
             # TODO: poner un usuario modificable
             if context.user != 'admin':
-                context.save_write_op('MKD'," ".join(args)) 
+                context.save_write_op('MKD',[" ".join(args)]) 
            #else: 
            #    context.increse_last_operation()
 
@@ -144,7 +144,7 @@ class DELECommand(BaseCommand):
 
 
         if context.user != 'admin':
-            context.save_write_op('DELE'," ".join(args)) 
+            context.save_write_op('DELE',[" ".join(args)]) 
         else:
             #context.increse_last_operation()
             context.send_control_response(550,
@@ -165,7 +165,7 @@ class RMDCommand(BaseCommand):
                     'Dir removed.')
 
                 if context.user != 'admin':
-                    context.save_write_op('RMD'," ".join(args)) 
+                    context.save_write_op('RMD',[" ".join(args)]) 
                #else:
                #    context.increse_last_operation()
             except: 
@@ -208,7 +208,7 @@ class RNTOCommand(BaseCommand):
 
                 if context.user != 'admin':
                     context.save_write_op('RENAME',
-                        f"'{context.get_absolute_path_from_os_path(context.reneme_from)}' '{context.get_absolute_path(new_name)}'") 
+                        [context.get_absolute_path_from_os_path(context.reneme_from), context.get_absolute_path(new_name)]) 
             except:
                 context.send_control_response(553, 'Requested action not taken.')
             finally:
