@@ -47,6 +47,7 @@ class Context:
         if type_ != 'RENAME': 
             path=self.get_absolute_path(args[0])
             self.save_write_operation([type_, path]) 
+            return 
 
         self.save_write_operation([type_, args[0], args[1]])
 

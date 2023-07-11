@@ -180,15 +180,15 @@ class Coordinator:
             func()
             time.sleep(wait_time)
 
-    def _save_command_to_replicate(self):
+#def _save_command_to_replicate(self):
 
-        ftp_id, request =self.new_operations.get()
+#    ftp_id, request =self.new_operations.get()
 
-        self.bully_protocol\
-            .sinc\
-            .logs_dict\
-            .setdefault(self.bully_protocol.sinc.hash,[])\
-            .append((ftp_id, request))
+#    self.bully_protocol\
+#        .sinc\
+#        .logs_dict\
+#        .setdefault(self.bully_protocol.sinc.hash,[])\
+#        .append((ftp_id, request))
 
 
     def _get_ftp_with_data(self, hash: int, operation_id: int):
@@ -198,125 +198,125 @@ class Coordinator:
             return posibles[random.randint(0,len(posibles)-1)]
         return None
 
-    def modify_path_tree(self, request):
-        match request: 
-            case ['STOR'|'MKD', *path]:
-                path = ' '.join(path)
-                self.ftp_tree[path] = True
-            case ['DELE'|'RMD', *path]:
-                path = ' '.join(path)
-                self.ftp_tree[path] = False
-            case ['RENAME', *args]:
-                path, new_name = re.findall(r"\'(.*?)\'",' '.join(args))
-                self.ftp_tree[path] = False
-                self.ftp_tree[new_name] = True 
+   #def modify_path_tree(self, request):
+   #    match request: 
+   #        case ['STOR'|'MKD', *path]:
+   #            path = ' '.join(path)
+   #            self.ftp_tree[path] = True
+   #        case ['DELE'|'RMD', *path]:
+   #            path = ' '.join(path)
+   #            self.ftp_tree[path] = False
+   #        case ['RENAME', *args]:
+   #            path, new_name = re.findall(r"\'(.*?)\'",' '.join(args))
+   #            self.ftp_tree[path] = False
+   #            self.ftp_tree[new_name] = True 
 
-    def _consume_command_to_replicate(self,):
-        log_index, hash, ftp_id = self.operations_to_do.get()
-
-
-        if ftp_id not in self.available_ftp:
-            #loggin.debug("The ftp is not available, thats why you cant send it the new data")
-            return
-
-        ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
-        original_ftp_with_data,request=self.bully_protocol.sinc.logs_dict[hash][log_index]
+#def _consume_command_to_replicate(self,):
+#    log_index, hash, ftp_id = self.operations_to_do.get()
 
 
-        if ftp_id == original_ftp_with_data:
-            #si es el mismo ftp que mando la operacion,
-            #simplemente mandamos a incrementar su contador interno
-            remote_operations.increse_last_command(ftp_addr, hash)
-            self.available_ftp[ftp_id]['last_operations_id'].setdefault(hash,0)
-            self.available_ftp[ftp_id]['last_operations_id'][hash]+=1
+#    if ftp_id not in self.available_ftp:
+#        #loggin.debug("The ftp is not available, thats why you cant send it the new data")
+#        return
 
-            self.modify_path_tree(request)
-            return
-
-        #loggin.debug(f'replicating {request} to {ftp_id}')
-        try:
-            match request:
-                case ['STOR', *path]:
-                    path = ' '.join(path)
-
-                    ftp_with_data_name = self._get_ftp_with_data(hash,log_index)
-                    if ftp_with_data_name is None:
-                        logging.debug("There is no ftp available to replicate the data")
-
-                        #temporal solution
-                        self.operations_to_do = Queue()
-
-                        return
-
-                    ok, code, error_command = remote_operations.ftp_to_ftp_copy(
-                        emiter_addr=(
-                            self.available_ftp[ftp_with_data_name]['host'],
-                            self.available_ftp[ftp_with_data_name]['port'],
-                        ),
-                        replication_addr=ftp_addr,
-                        file_path1=path,
-                        file_path2=path
-                    )
+#    ftp_addr=self.available_ftp[ftp_id]['host'],self.available_ftp[ftp_id]['port']
+#    original_ftp_with_data,request=self.bully_protocol.sinc.logs_dict[hash][log_index]
 
 
-                    if not ok: 
-                        if code == 501 and error_command == 'STOR':
-                            logging.warning("Not founded route for replicate, creating.")
-                            conteining_folder_path = '/'+ '/'.join(path.strip('/').split('/')[:-1]) + '/'
-                            remote_operations.create_route_in_addr(ftp_addr,conteining_folder_path)
-                            ## ver si llamar directamente el metodo _consume_command_to_replicate()
-                            ## puede dar problemas con la 'concurrencia'
+#    if ftp_id == original_ftp_with_data:
+#        #si es el mismo ftp que mando la operacion,
+#        #simplemente mandamos a incrementar su contador interno
+#        remote_operations.increse_last_command(ftp_addr, hash)
+#        self.available_ftp[ftp_id]['last_operations_id'].setdefault(hash,0)
+#        self.available_ftp[ftp_id]['last_operations_id'][hash]+=1
 
-                            self.operations_to_do = Queue()
-                            return
+#        self.modify_path_tree(request)
+#        return
 
+#    #loggin.debug(f'replicating {request} to {ftp_id}')
+#    try:
+#        match request:
+#            case ['STOR', *path]:
+#                path = ' '.join(path)
 
-                        elif code == 501 and error_command == 'RETR':
-                            pass
+#                ftp_with_data_name = self._get_ftp_with_data(hash,log_index)
+#                if ftp_with_data_name is None:
+#                    logging.debug("There is no ftp available to replicate the data")
 
+#                    #temporal solution
+#                    self.operations_to_do = Queue()
 
-                    #conteining_folder_path = '/'.join(path.split('/')[:-1]) + '/'
-                    #if not ok and (conteining_folder_path in self.ftp_tree) and not self.ftp_tree[conteining_folder_path]: # ver que la carpeta que lo contiene haya existido en algun momento ....
+#                    return
 
-                        # si la carpeta que lo contiene existio' en algun momento, entonces se puede     
-                        # crear la carpeta, pues probablemente, desde el punto de vista de algunos usuarios,
-                        # nunca se elimino' o renombro'
-                    #    pass
-
-                        
-
-                    #loggin.debug(f'Replication ended in {ftp_id} from {ftp_with_data_name}')  
-
-                case ['MKD', *path]:
-                    path = ' '.join(path)
-                    #ok, code,_ = remote_operations.create_folder(ftp_addr,path=path)
-                    remote_operations.create_route_in_addr(ftp_addr,path)
-
-                case ['DELE', *path]:
-                    path = ' '.join(path)
-                    remote_operations.delete_file(ftp_addr,path=path)
-
-                case ['RMD', *path]:
-                    path = ' '.join(path)
-                    remote_operations.delete_folder(ftp_addr,path=path)
-
-                case ['RENAME', *args]:
-                    # asumamos que esto llega sin lio
-                    path, new_name = re.findall(r"\'(.*?)\'",' '.join(args))
-                    remote_operations.rename_file(ftp_addr,
-                                                  path=path,
-                                                  new_name=new_name)
-
-        except Exception as e:
-            logging.warning(f"Failed to replicate the data from {ftp_addr} to {ftp_id}!")
-            print("*"*10)
-            logging.debug(e)
-            print("*"*10)
+#                ok, code, error_command = remote_operations.ftp_to_ftp_copy(
+#                    emiter_addr=(
+#                        self.available_ftp[ftp_with_data_name]['host'],
+#                        self.available_ftp[ftp_with_data_name]['port'],
+#                    ),
+#                    replication_addr=ftp_addr,
+#                    file_path1=path,
+#                    file_path2=path
+#                )
 
 
-        self.available_ftp[ftp_id]['last_operations_id'].setdefault(hash,0)
-        self.available_ftp[ftp_id]['last_operations_id'][hash]+=1
-        remote_operations.increse_last_command(ftp_addr, hash)
+#                if not ok: 
+#                    if code == 501 and error_command == 'STOR':
+#                        logging.warning("Not founded route for replicate, creating.")
+#                        conteining_folder_path = '/'+ '/'.join(path.strip('/').split('/')[:-1]) + '/'
+#                        remote_operations.create_route_in_addr(ftp_addr,conteining_folder_path)
+#                        ## ver si llamar directamente el metodo _consume_command_to_replicate()
+#                        ## puede dar problemas con la 'concurrencia'
+
+#                        self.operations_to_do = Queue()
+#                        return
+
+
+#                    elif code == 501 and error_command == 'RETR':
+#                        pass
+
+
+#                #conteining_folder_path = '/'.join(path.split('/')[:-1]) + '/'
+#                #if not ok and (conteining_folder_path in self.ftp_tree) and not self.ftp_tree[conteining_folder_path]: # ver que la carpeta que lo contiene haya existido en algun momento ....
+
+#                    # si la carpeta que lo contiene existio' en algun momento, entonces se puede     
+#                    # crear la carpeta, pues probablemente, desde el punto de vista de algunos usuarios,
+#                    # nunca se elimino' o renombro'
+#                #    pass
+
+#                    
+
+#                #loggin.debug(f'Replication ended in {ftp_id} from {ftp_with_data_name}')  
+
+#            case ['MKD', *path]:
+#                path = ' '.join(path)
+#                #ok, code,_ = remote_operations.create_folder(ftp_addr,path=path)
+#                remote_operations.create_route_in_addr(ftp_addr,path)
+
+#            case ['DELE', *path]:
+#                path = ' '.join(path)
+#                remote_operations.delete_file(ftp_addr,path=path)
+
+#            case ['RMD', *path]:
+#                path = ' '.join(path)
+#                remote_operations.delete_folder(ftp_addr,path=path)
+
+#            case ['RENAME', *args]:
+#                # asumamos que esto llega sin lio
+#                path, new_name = re.findall(r"\'(.*?)\'",' '.join(args))
+#                remote_operations.rename_file(ftp_addr,
+#                                              path=path,
+#                                              new_name=new_name)
+
+#    except Exception as e:
+#        logging.warning(f"Failed to replicate the data from {ftp_addr} to {ftp_id}!")
+#        print("*"*10)
+#        logging.debug(e)
+#        print("*"*10)
+
+
+#    self.available_ftp[ftp_id]['last_operations_id'].setdefault(hash,0)
+#    self.available_ftp[ftp_id]['last_operations_id'][hash]+=1
+#    remote_operations.increse_last_command(ftp_addr, hash)
 
     def _handle_conn(self, conn: socket.socket, addr):
 
@@ -324,7 +324,7 @@ class Coordinator:
         try:
             request=conn.recv(1024).decode('ascii')
             request=request.split()
-
+            print(request)
             node_id = request.pop(0)
             request[0]=request[0].upper()
             match request:
@@ -333,14 +333,16 @@ class Coordinator:
                 case ["GET_TREE"]:
                     tree_serialized=json.dumps(self.ftp_tree)
                     conn.send(tree_serialized.encode())
-                case ["ADD_TO_TREE",port, *path]:
-                    self.ftp_tree.setdefault(" ".join(path),[]).append(addr[0], port)
+                case ["ADD_TO_TREE",port,type_, *path]:
+                    self.ftp_tree.setdefault(" ".join(path),[]).append({"type":type_,"addr":(addr[0], int(port))})
 
                 case ["REMOVE_FROM_TREE", *path]:
                     try:
+                        print(">>>>>>",path)
                         self.ftp_tree.pop(" ".join(path))
-                    except (KeyError):
+                    except (KeyError) as e:
                         # no problemo :D
+                        logging.error(f"ERROR refreshing the tree (REMOVE_FROM_TREE) {e}")
                         pass
 
             #self.new_operations.put((node_id, request))
@@ -348,6 +350,8 @@ class Coordinator:
 
         except TimeoutError:
             logging.error(f"Connection Timeout {addr}")
+        except Exception as e: 
+            logging.error(f"OTRO ERROR:{e}" )
         finally:
             conn.close()
 
@@ -361,8 +365,8 @@ class Coordinator:
         threading.Thread(target=self._refresh_loop,args=(self._refresh_nodes, self.refresh_time)).start()
 
 
-        threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
-        threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
+        #threading.Thread(target=self._refresh_loop,args=(self._save_command_to_replicate,0)).start()
+        #threading.Thread(target=self._refresh_loop,args=(self._consume_command_to_replicate,0)).start()
 
         threading.Thread(target=self.bully_protocol.receive_message,args=()).start()
         threading.Thread(target=self.bully_protocol.loop_ping,args=()).start()

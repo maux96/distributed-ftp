@@ -9,6 +9,8 @@ import json
 import logging
 import random
 import re
+import os
+import pathlib 
 
 from coordinator_server import coordinator
 from coordinator_server import remote_operations
@@ -50,7 +52,7 @@ class FTP:
         #self.last_write_command_id = 0
         self.last_write_command_id: dict[str, int] = {} 
 
-        self.file_tree: set[str] = set() 
+        self.file_tree: dict[str, str] = {}
         self.coordinator_tree: dict[str, list[tuple[str, int]]] = {}
 
         self.discoverer = discoverer.Discoverer(
@@ -61,31 +63,42 @@ class FTP:
     def set_coordinator(self, coordinator_dir):
         self.current_coordinator = coordinator_dir 
 
+    def get_file_system(self):
+        sol = []
+        for route, files, folders in os.walk(self.root_path):
+            sol+=[route+'/'+f for f in files]+ [route +'/'+ f for f in folders]
+        return sol
+    def is_file(self, route):
+        return pathlib.Path(self.root_path,route).is_file()
+
+
     def operation_saver(self):
         while True:
             while self.write_operations.empty():
                 sleep(1)
             operation=self.write_operations.queue[0]
+            
             if self.current_coordinator is None: 
                 logging.warning("No coordinator available!")
                 sleep(10)
                 continue             
-
             match operation:
-                case ['STOR' | 'MKD', *path]:
+                case ['STOR' | 'MKD' as type_, *path]:
                     soc=utils.connect_socket_to(*self.current_coordinator)
                     if soc is not None:
-                        soc.send(f"ADD_TO_TREE {self.port} {' '.join(path)}".encode())
-                        self.file_tree.add(" ".join(path))
+                        type_ ='folder' if type_=='MKD' else 'file'
+                        soc.send(f"{self.id} ADD_TO_TREE {self.port} {type_} {' '.join(path)}".encode())
+                        soc.close()
                     else: 
                         continue
                     
                 case ['DELE' | 'RMD',*path]:
                     soc=utils.connect_socket_to(*self.current_coordinator)
                     if soc is not None:
-                        soc.send(f"REMOVE_FROM_TREE {' '.join(path)}".encode())
-                        self.file_tree.remove(" ".join(path))
+                        soc.send(f"{self.id} REMOVE_FROM_TREE {' '.join(path)}".encode())
+                        soc.close()
                     else: 
+                        logging.warning("Cant connect to coordinator!")
                         continue
 
                 case ['RENAME', *args]:
@@ -93,10 +106,10 @@ class FTP:
                     soc=utils.connect_socket_to(*self.current_coordinator)
                     
                     if soc is not None:
-                        soc.send(f"REMOVE_FROM_TREE {' '.join(from_path)}".encode())
-                        soc.send(f"ADD_TO_TREE {' '.join(to_path)}".encode())
-                        self.file_tree.remove(from_path)
-                        self.file_tree.add(to_path)
+                        soc.send(f"{self.id} REMOVE_FROM_TREE {' '.join(from_path)}".encode())
+                        soc.send(f"{self.id} ADD_TO_TREE {' '.join(to_path)}".encode())
+
+                        soc.close()
                     else: 
                         continue
 
@@ -108,29 +121,42 @@ class FTP:
         while True:
             if self.current_coordinator is None: 
                 logging.warning("No coordinator available!")
-                #self.write_operations.put(operation)
-                return  
+                sleep(FTP.TREE_REFRESH_TIME//2)
+                continue  
                
             if (soc:=utils.connect_socket_to(*self.current_coordinator)):
-                soc.send(b"GET_TREE")
-                tree=json.loads(soc.recv(2048))
-                #self.coordinator_tree = tree 
+                soc.send(f"{self.id} GET_TREE".encode())
+                serialized_json=soc.recv(4096).decode()
+                tree=json.loads(serialized_json)
 
-                for path in self.file_tree:
+                for path in self.get_file_system():
                     if path not in tree.keys():
-                        self.file_tree.remove(path)
+                        print("PATHHHH -----< ",path)
 
-                for path, ftps in tree:
-                    if path not in self.file_tree:
+                        if self.is_file(path):
+                            remote_operations.delete_file((self.host, self.port),path)
+                        else:
+                            remote_operations.delete_folder((self.host, self.port),path)
+
+
+                for path, ftps in tree.items():
+                    if path not in self.get_file_system():
                         # TODO verificar que el ftp seleccionado esta disponible
                         ftp_to_copy_from = ftps[random.randint(0,len(ftps)-1)]
-                        remote_operations.ftp_to_ftp_copy(
-                            ftp_to_copy_from,
-                            (self.host, self.port)
-                            ,path, path)
+                        type_ = ftp_to_copy_from['type']
+                        self.file_tree[path] = type_
 
+                        if self.is_file(path):
+                            remote_operations.ftp_to_ftp_copy(
+                                tuple(ftp_to_copy_from['addr']),
+                                (self.host, self.port),
+                                path,
+                                path)
+                        else:
+                            remote_operations.create_folder((self.host, self.port),path)
 
             sleep(FTP.TREE_REFRESH_TIME)
+
 
 
     def start_connection(self,conn: socket.socket, addr):
