@@ -14,12 +14,12 @@ class Bully:
         self.leader = False
         self.in_leader_group = False
         self.sleep_time = sleep_time
+        self.lasts_coordinators = []
 
         listen_port = utils.create_socket_and_listen(
             coordinator.host, port=Bully.DEFAULT_LISTENING_PORT)
 
         self.leader_host = coordinator.host
-        # self.leader_host = None TODO este pinchaba en la version estable
 
         if listen_port is None:
             logging.error(
@@ -75,8 +75,6 @@ class Bully:
             # return
         else:
             # Actualizar el hash porque se cayo un lider superior
-            self.sinc.update_hash()
-
             self.leader = True
             self.coordinator.accepting_connections = True
             self.leader_host = self.coordinator.host
@@ -313,8 +311,7 @@ class Bully:
         logging.info(str(self.coordinator.host) + ": loop ping init ")
 
         while True:
-            logging.debug("Current Hash: " + str(self.sinc.hash))
-            logging.debug("Hash Table Operations: " + str(utils.commands_logs(self.sinc.logs_dict)))
+            logging.debug("Current Tree: " + str(self.coordinator.ftp_tree))
         
             if self.leader:
 
@@ -399,6 +396,5 @@ class Bully:
         
         elif not sender_buff:
             socket.send(b"no")
-
 
         self.leader_host = host
