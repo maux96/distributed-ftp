@@ -247,7 +247,7 @@ class Coordinator:
 
                         return
 
-                    ok=remote_operations.ftp_to_ftp_copy(
+                    ok, code, error_command = remote_operations.ftp_to_ftp_copy(
                         emiter_addr=(
                             self.available_ftp[ftp_with_data_name]['host'],
                             self.available_ftp[ftp_with_data_name]['port'],
@@ -257,12 +257,30 @@ class Coordinator:
                         file_path2=path
                     )
 
-                    conteining_folder_path = '/'.join(path.split('/')[:-1]) + '/'
-                    if not ok and (conteining_folder_path in self.ftp_tree) and not self.ftp_tree[conteining_folder_path]: # ver que la carpeta que lo contiene haya existido en algun momento ....
+
+                    if not ok: 
+                        if code == 501 and error_command == 'STOR':
+                            logging.warning("Not founded route for replicate, creating.")
+                            conteining_folder_path = '/'+ '/'.join(path.strip('/').split('/')[:-1]) + '/'
+                            remote_operations.create_route_in_addr(ftp_addr,conteining_folder_path)
+                            ## ver si llamar directamente el metodo _consume_command_to_replicate()
+                            ## puede dar problemas con la 'concurrencia'
+
+                            self.operations_to_do = Queue()
+                            return
+
+
+                        elif code == 501 and error_command == 'RETR':
+                            pass
+
+
+                    #conteining_folder_path = '/'.join(path.split('/')[:-1]) + '/'
+                    #if not ok and (conteining_folder_path in self.ftp_tree) and not self.ftp_tree[conteining_folder_path]: # ver que la carpeta que lo contiene haya existido en algun momento ....
+
                         # si la carpeta que lo contiene existio' en algun momento, entonces se puede     
                         # crear la carpeta, pues probablemente, desde el punto de vista de algunos usuarios,
                         # nunca se elimino' o renombro'
-                        pass
+                    #    pass
 
                         
 
@@ -270,7 +288,8 @@ class Coordinator:
 
                 case ['MKD', *path]:
                     path = ' '.join(path)
-                    remote_operations.create_folder(ftp_addr,path=path)
+                    #ok, code,_ = remote_operations.create_folder(ftp_addr,path=path)
+                    remote_operations.create_route_in_addr(ftp_addr,path)
 
                 case ['DELE', *path]:
                     path = ' '.join(path)

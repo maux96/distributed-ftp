@@ -48,10 +48,12 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
         #logging.debug('FTPxFTPcopy | RETR operation not posible. Ignoring.')
         s1.close()
         s2.close()
-        return False
+        return False, 501, 'RETR' 
 
     s2.send(f'STOR {file_path2}'.encode('ascii'))
     control_response2=s2.recv(2048).decode('ascii')
+    if control_response2.split()[0] == '501':
+        return False, 501, 'STOR'
     
     control_response1=s1.recv(2048).decode('ascii')
     control_response2=s2.recv(2048).decode('ascii')
@@ -59,7 +61,7 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     s1.close()
     s2.close()
 
-    return True
+    return True, 0, None
 
 
 def rename_file(addr: tuple[str, int], path: str | Path, new_name: str):
@@ -72,14 +74,15 @@ def rename_file(addr: tuple[str, int], path: str | Path, new_name: str):
 
             s1.send(f'RNFR {path}'.encode())
             s1.recv(256)
-              
-            s1.send(f'RNTO {new_name}'.encode())
-            s1.recv(256)
 
-            return True
+            s1.send(f'RNTO {new_name}'.encode())
+            if s1.recv(256).decode().split()[0] == '553':
+                return False,553,'RNTO'
+
+            return True, 0, None
     else: 
         logging.warning(f"Connection not established renaming a file to '{new_name}' in {addr}. Aborting.")
-        return False
+        return False, -1, None
 
 def increse_last_command(addr, hash: str):
     if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
@@ -111,10 +114,10 @@ def create_folder(replication_addr, path: str | Path):
 
         s1.send(f"MKD {path}".encode('ascii'))
 
-        # TODO comprobar que haya sido valida la creacion de la carpeta
-        s1.recv(2048)
+        if s1.recv(2048).decode().split()[0] != '257':
+            return False, 501, 'MKD'
 
-        return True
+    return True,0, None
 
 def delete_file(replication_addr, path: str | Path):
     path = Path(path)
@@ -129,11 +132,11 @@ def delete_file(replication_addr, path: str | Path):
 
         s1.send(f"DELE {path}".encode('ascii'))
 
-        # TODO comprobar que haya sido valida la creacion de la carpeta
-        s1.recv(2048)
+        
+        if s1.recv(2048).decode().split()[0] != '250':
+            return False, 501, 'DELE'
 
-        return True 
-    pass
+    return True, 0, None
 
 def delete_folder(replication_addr, path: str | Path):
     path = Path(path)
@@ -148,8 +151,30 @@ def delete_folder(replication_addr, path: str | Path):
 
         s1.send(f"RMD {path}".encode('ascii'))
 
-        # TODO comprobar que haya sido valida la creacion de la carpeta
-        s1.recv(2048)
+        if s1.recv(2048).decode().split()[0] != '250':
+            return False, 501, 'RMD'
 
-        return True
-    pass
+
+    return True, 0, None
+
+
+
+### auxiliares:
+
+def create_route_in_addr(addr: tuple[str, int],route: str):
+    route_segments=route.strip('/').split('/')
+
+    if (s1:= utils.connect_socket_to(*addr)) and s1 is not None:
+        with s1:
+            s1.recv(256)
+            login('admin',s1)
+
+            for i in range(0,len(route_segments)):
+                print(route_segments[:i+1])
+                s1.send(f"MKD /{'/'.join(route_segments[:i+1])}/".encode('ascii'))
+                s1.recv(512)
+                
+    return True, 0, None
+
+
+
