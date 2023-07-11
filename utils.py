@@ -10,7 +10,7 @@ def connect_socket_to(host, port, timeout=5) -> socket.socket | None:
         sock = create_tcp_socket()
         sock.settimeout(timeout)
         sock.connect((host, port))
-    except (ConnectionError, TimeoutError):
+    except (ConnectionError, TimeoutError, OSError):
         return None
 
     return sock

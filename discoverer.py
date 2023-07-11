@@ -74,11 +74,14 @@ class Discoverer:
     def send_identify_broadcast(self):
         logging.debug("Broadcasting discover message!")
         message = f"IDENTIFY {self.host} {self.reciving_port}"
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
-            udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp_socket:
+                udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
-            udp_socket.settimeout(1.0)
-            udp_socket.sendto(message.encode(), ('<broadcast>', self.udp_port))
+                udp_socket.settimeout(1.0)
+                udp_socket.sendto(message.encode(), ('<broadcast>', self.udp_port))
+        except (ConnectionError, OSError):
+            logging.warning("Can't send a broadcast in discover.")
             #udp_socket.sendto(message.encode(), ('255.255.255.0', self.udp_port))
 
 
