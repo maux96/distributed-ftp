@@ -113,9 +113,9 @@ class MKDCommand(BaseCommand):
         dir_name = path_name.name   
 
         parent_dir_abs_route = context.verify_and_get_absolute_os_path(parent_dir)
+        dir_abs_path = context.verify_and_get_absolute_os_path(path_name)
         
-        # TODO verificar si existe una carpeta con el mismo nombre
-        if parent_dir_abs_route is not None:
+        if parent_dir_abs_route is not None and dir_abs_path is None:
             (parent_dir_abs_route/dir_name).mkdir()
             context.send_control_response(257,
                 'Directory Created.')
