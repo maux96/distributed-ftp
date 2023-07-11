@@ -66,11 +66,14 @@ class FTP:
     def get_file_system(self):
         sol = []
         for route, files, folders in os.walk(self.root_path):
-            sol+=[route+'/'+f for f in files]+ [route +'/'+ f for f in folders]
+            sol+=['/'+f for f in files]+ ['/'+ f for f in folders]
+        print("#"*20,sol)
         return sol
-    def is_file(self, route):
-        return pathlib.Path(self.root_path,route).is_file()
 
+    def is_folder(self, route: str):
+        p=pathlib.Path(self.root_path,route.strip('/')+'/')
+        print("IS FOLDER?---",p)
+        return p.exists()  and p.is_dir()
 
     def operation_saver(self):
         while True:
@@ -129,31 +132,38 @@ class FTP:
                 serialized_json=soc.recv(4096).decode()
                 tree=json.loads(serialized_json)
 
-                for path in self.get_file_system():
-                    if path not in tree.keys():
-                        print("PATHHHH -----< ",path)
-
-                        if self.is_file(path):
-                            remote_operations.delete_file((self.host, self.port),path)
-                        else:
-                            remote_operations.delete_folder((self.host, self.port),path)
-
-
+                
                 for path, ftps in tree.items():
+                    print(path,"||||||", self.get_file_system())
                     if path not in self.get_file_system():
                         # TODO verificar que el ftp seleccionado esta disponible
                         ftp_to_copy_from = ftps[random.randint(0,len(ftps)-1)]
-                        type_ = ftp_to_copy_from['type']
-                        self.file_tree[path] = type_
 
-                        if self.is_file(path):
+                        if not self.is_folder(path):
                             remote_operations.ftp_to_ftp_copy(
                                 tuple(ftp_to_copy_from['addr']),
                                 (self.host, self.port),
                                 path,
                                 path)
-                        else:
+
                             remote_operations.create_folder((self.host, self.port),path)
+                        else:
+                            print('ENTROOO CARPETAAAAA!!!')
+                            #remote_operations.create_folder((self.host, self.port),path)
+
+                for path in self.get_file_system():
+                    if path not in tree.keys():
+                        print("PATHHHH-----< ",path)
+                        print(tree.keys())
+
+                        if self.is_folder(path):
+                            print('ENTROOO CARPETAAAAA BORRAR!!!')
+                            remote_operations.delete_folder((self.host, self.port),path)
+                        else:
+                            remote_operations.delete_file((self.host, self.port),path)
+
+
+
 
             sleep(FTP.TREE_REFRESH_TIME)
 
