@@ -67,14 +67,18 @@ class FTP:
         sol = []
         for route, files, folders in os.walk(self.root_path):
             sol+=['/'+f for f in files]+ ['/'+ f for f in folders]
-        print("#"*20,sol)
+        # print("#"*20,sol)
         return sol
 
     def is_folder(self, route: str):
-        p=pathlib.Path(self.root_path,route.strip('/')+'/')
-        print("IS FOLDER?---",p)
-        return p.exists()  and p.is_dir()
+        p=pathlib.Path(self.root_path,route.strip('/'))
+        print("ANALISIS FILE_FOLDER---", p)
+        print("Existe? ", p.exists())
+        # if p.exists():
 
+        print("Es dir? ", p.is_dir())
+        return p.is_dir()
+    
     def operation_saver(self):
         while True:
             while self.write_operations.empty():
@@ -138,18 +142,20 @@ class FTP:
                     if path not in self.get_file_system():
                         # TODO verificar que el ftp seleccionado esta disponible
                         ftp_to_copy_from = ftps[random.randint(0,len(ftps)-1)]
+                        
+                        is_folder = ftp_to_copy_from['type'] == 'folder'
+                        print(f"{path}: Is Folder ????????????????????????? ", is_folder)
 
-                        if not self.is_folder(path):
+                        if not is_folder:
                             remote_operations.ftp_to_ftp_copy(
                                 tuple(ftp_to_copy_from['addr']),
                                 (self.host, self.port),
                                 path,
                                 path)
 
-                            remote_operations.create_folder((self.host, self.port),path)
                         else:
+                            remote_operations.create_folder((self.host, self.port),path)
                             print('ENTROOO CARPETAAAAA!!!')
-                            #remote_operations.create_folder((self.host, self.port),path)
 
                 for path in self.get_file_system():
                     if path not in tree.keys():
@@ -190,7 +196,7 @@ class FTP:
                         exist_command=True
                         command.resolve(current_context,args[1:]) 
 
-                        logging.info(f'{addr}::{" ".join(args)}')
+                        #logging.info(f'{addr}::{" ".join(args)}')
                         break
                 if not exist_command:
                     logging.debug(f"Not implemented command {message}")
