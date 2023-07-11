@@ -1,17 +1,18 @@
 total_ftps=0
 total_coords=0
 root_places=~/distributed-ftp-testing
+network_device=wlo1
 
 
-IP_ADDRS=$(ip addr show wlo1 | grep 'inet\b' | awk '{print $2}' | cut -d '/' -f1)
-
-while getopts ":f:c:r:h:" opt; do
+while getopts ":f:c:r:h:n:" opt; do
   case $opt in
     f) total_ftps="$OPTARG"
     ;;
     c) total_coords="$OPTARG"
     ;;
     r) root_places="$OPTARG"
+    ;;
+    n) network_device="$OPTARG"
     ;;
     #h) echo "Available args are: -f TOTAL_FTP | -c TOTAL_COORDS | -r ROOT-DIR"
     #exit 0
@@ -30,13 +31,11 @@ done
 
 printf "opening total ftps : %s\n" "$total_ftps"
 printf "opening total coordinators : %s\n" "$total_coords"
-printf "opening total root_places : %s\n" "$root_places"
+printf "root_places : %s\n" "$root_places"
+printf "network_device : %s\n" "$network_device"
 
-source ../env/bin/activate
 
-#kitty sh -c "pyro5-ns" &
-#pids[0]=$!
-
+IP_ADDRS=$(ip addr show $network_device | grep 'inet\b' | awk '{print $2}' | cut -d '/' -f1)
 
 for i in $(seq $total_coords);
 do
