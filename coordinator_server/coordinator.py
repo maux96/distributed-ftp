@@ -108,64 +108,67 @@ class Coordinator:
         ftp_nodes_in_name_server: dict[str, tuple[str,int]]= self._get_avalible_nodes('ftp')
         valid_ftp: dict[str, FTPDescriptor] = {} 
         exist_changes= False 
-        for name,ftp_addr in ftp_nodes_in_name_server.items():  
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.settimeout(5) 
-                    s.connect(ftp_addr)
-                    #se comprueba que el servidor ftp este aceptando conexiones
+        try:
+            for name,ftp_addr in ftp_nodes_in_name_server.items():  
+                try:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.settimeout(5) 
+                        s.connect(ftp_addr)
+                        #se comprueba que el servidor ftp este aceptando conexiones
 
-                    if s.recv(2048).decode('ascii').split(' ')[0] == '220':
+                        if s.recv(2048).decode('ascii').split(' ')[0] == '220':
 
-                        remote_operations.login('admin', s)
+                            remote_operations.login('admin', s)
 
-                        s.send(f"SETCOORD {self.port}".encode('ascii'))
-                        resp_code, *_ =s.recv(2048).decode('ascii').split(' ')
+                            s.send(f"SETCOORD {self.port}".encode('ascii'))
+                            resp_code, *_ =s.recv(2048).decode('ascii').split(' ')
 
 
-                        if resp_code == '200':
-                            # ademas mandamos los IPs de los co_coordinadores
+                            if resp_code == '200':
+                                # ademas mandamos los IPs de los co_coordinadores
 
-                            s.send('CLEARCOCOORD'.encode('ascii'))
-                            s.recv(126)
-                            for co_host, co_port in self.bully_protocol.leaders_group:
-                                s.send(f'ADDCOCOORD {co_host} {co_port}'.encode('ascii'))
+                                s.send('CLEARCOCOORD'.encode('ascii'))
                                 s.recv(126)
-                             
-                            
-                            current_ftp = FTPDescriptor(
-                                host=ftp_addr[0],
-                                port=ftp_addr[1],
-                                last_operations_id={})
-                            """ for hash in self.bully_protocol.sinc.logs_dict:
-                                s.send(f"LASTFROMHASH {hash}".encode('ascii'))
-                                response=s.recv(512).decode().split()
-                                _resp_code,last_operation,*_=response
+                                for co_host, co_port in self.bully_protocol.leaders_group:
+                                    s.send(f'ADDCOCOORD {co_host} {co_port}'.encode('ascii'))
+                                    s.recv(126)
+                                
+                                
+                                current_ftp = FTPDescriptor(
+                                    host=ftp_addr[0],
+                                    port=ftp_addr[1],
+                                    last_operations_id={})
+                                """ for hash in self.bully_protocol.sinc.logs_dict:
+                                    s.send(f"LASTFROMHASH {hash}".encode('ascii'))
+                                    response=s.recv(512).decode().split()
+                                    _resp_code,last_operation,*_=response
 
-                                last_operation = int(last_operation)
-                                current_ftp['last_operations_id'][hash] = last_operation
-                                self._add_operations_to_do(last_operation_in_ftp=last_operation,
-                                                           hash=hash,
-                                                           ftp_name=name) """
+                                    last_operation = int(last_operation)
+                                    current_ftp['last_operations_id'][hash] = last_operation
+                                    self._add_operations_to_do(last_operation_in_ftp=last_operation,
+                                                            hash=hash,
+                                                            ftp_name=name) """
 
-                            valid_ftp[name] =  current_ftp
+                                valid_ftp[name] =  current_ftp
 
-                            if name not in self.available_ftp:
-                                exist_changes = True 
+                                if name not in self.available_ftp:
+                                    exist_changes = True 
+                            else:
+                                raise ConnectionError('Bad Connection')
                         else:
                             raise ConnectionError('Bad Connection')
-                    else:
-                        raise ConnectionError('Bad Connection')
-                    s.send(b'QUIT')
-            except (TimeoutError, OSError, ConnectionError) as e:
-                exist_changes = True 
-                logging.info(f'{e}::Removing ftp server {name}.')
+                        s.send(b'QUIT')
+                except (TimeoutError, OSError, ConnectionError) as e:
+                    exist_changes = True 
+                    logging.info(f'{e}::Removing ftp server {name}.')
+                    pass
+                
+            if exist_changes:
+                logging.info(f"Total current FTPs: {len(valid_ftp)}")
                 pass
-            
-        if exist_changes:
-            logging.info(f"Total current FTPs: {len(valid_ftp)}")
-            pass
-
+        except:
+            logging.error("Error aleatorio mientras se actualizaban los ftps")
+            return 
         self.available_ftp = valid_ftp 
         logging.debug(f"Current available FTPs:{utils.last_ftp_operations(valid_ftp)}")
 

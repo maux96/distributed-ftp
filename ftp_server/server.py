@@ -166,7 +166,9 @@ class FTP:
                
             if (soc:=utils.connect_socket_to(*self.current_coordinator)):
                 soc.send(f"{self.id} GET_TREE".encode())
-                serialized_json=soc.recv(4096).decode()
+                serialized_json=b''
+                while chunk:=soc.recv(256):
+                    serialized_json+=chunk
                 tree=json.loads(serialized_json)
 
                 
