@@ -17,7 +17,8 @@ class Sinc:
         self.hash = create_random_hash()
 
     def get_sinc_from(self, buffer):
-        recieved_tree = json.loads(buffer)
+        recieved_tree = json.loads(buffer) ['tree']
+
         for dir in recieved_tree.keys():
             if dir not in self.tree:
                 self.coordinator.ftp_tree[dir] = recieved_tree.value()    
@@ -36,15 +37,20 @@ class Sinc:
             logging.error("Esta tratando de enviar informacion con socket None")
             return
         try:
-            to_send = self.tree
+            to_send = {'hash': self.hash, 'tree':self.tree }
             to_send = json.dumps(to_send)
             socket.send(bytes(to_send, encoding='ascii'))
         except:
             pass
 
     def sinc_with_leader(self, buffer):
-        recieved_tree = json.loads(buffer.decode())
-        #como se esta coordinando con el lider nos interesa que tome exactamente lo que tiene el lider, luego se limpia el tree de este coordinador y se replica exactamente igual al del lider
+        info = json.loads(buffer.decode())
+        recieved_tree = info['tree']
+        
+        #cuando se sincroniza con el lider hereda su hash
+        self.hash = info['hash']
+
+        #como se esta coordinando con el lider nos interesa que tome exactamente lo que tiene el lider, luego se limpia el tree de este coordinador y se replica exactamente igual al del lider. En caso que se tenga informacion relevante, se controla a nivel de secronizar desde el lider.
         self.coordinator.ftp_tree = {}
         for dir in recieved_tree.keys():
             self.coordinator.ftp_tree[dir] = recieved_tree.value()    
