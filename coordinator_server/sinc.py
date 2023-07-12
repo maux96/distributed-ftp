@@ -1,13 +1,20 @@
 import logging
 import json
+import random
+
+def create_random_hash():
+    return random.randint(5_000, 1_000_000_000)
 
 class Sinc:
     def __init__(self, coordinator, bully, host):
         self.DEFAULT_LISTENING_PORT = host
         self.coordinator = coordinator
         self.bully = bully
-        self.logs_dict: dict[int, list] = {}
         self.tree = coordinator.ftp_tree
+        self.hash = create_random_hash()
+    
+    def update_hash(self):
+        self.hash = create_random_hash()
 
     def get_sinc_from(self, buffer):
         recieved_tree = json.loads(buffer)
