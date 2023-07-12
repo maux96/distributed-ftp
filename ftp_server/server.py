@@ -172,35 +172,35 @@ class FTP:
                 
                 file_sys =  self.get_file_system()
                 # print(file_sys)
-                for path, ftps in tree.items():
-                    if path not in self.get_file_system():
+                for path, items in tree.items():
+                    ftps = items['ftps']
+                    if (path not in self.get_file_system()) and not tree[path]['deleted'] :
                         # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!NO EXISTEEEE", path)
                         # TODO verificar que el ftp seleccionado esta disponible
                         ftp_to_copy_from = ftps[random.randint(0,len(ftps)-1)]
                         
-                        is_folder = ftp_to_copy_from['type'] == 'folder'
+                        is_folder = items['type'] == 'folder'
 
                         if not is_folder:
                             remote_operations.create_path_and_replicate(
-                                tuple(ftp_to_copy_from['addr']),
+                                tuple(ftp_to_copy_from),
                                 (self.host, self.port),
                                 path,
                                 path)
+                            
+                            # self.send_to_coords(f"ADD_FTP_TO_PATH {self.port} {path}")
 
                         else:
                             remote_operations.create_folder((self.host, self.port),path)
 
                 for path in file_sys:
-                    if path not in tree.keys():
+                    if path not in tree.keys() or tree[path]['deleted']:
                         print(tree.keys())
 
                         if self.is_folder(path):
                             remote_operations.delete_folder((self.host, self.port),path)
                         else:
                             remote_operations.delete_file((self.host, self.port),path)
-
-
-
 
             sleep(FTP.TREE_REFRESH_TIME)
 

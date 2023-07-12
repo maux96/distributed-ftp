@@ -39,14 +39,15 @@ class Coordinator:
         self.available_coordinator={}
 
         self.refresh_time = refresh_time
-        self.ftp_tree= {}
-
+        self.ftp_tree= {}# 'hash': 'ftps': 'type': 'deleted':
+            
         self.new_operations = Queue() 
         self.operations_to_do = Queue()
         self.accepting_connections = False 
 
         # protocolo de seleccion de lider bully
         self.bully_protocol = bully.Bully(self) 
+        self.sync = self.bully_protocol.sinc 
 
     def _get_avalible_nodes(self,
                                 type_: Literal['ftp', 'coordinator']
@@ -202,16 +203,28 @@ class Coordinator:
                     tree_serialized=json.dumps(self.ftp_tree)
                     conn.send(tree_serialized.encode())
                 case ["ADD_TO_TREE",port,type_, *path]:
-                    self.ftp_tree.setdefault(" ".join(path),[]).append({"type":type_,"addr":(addr[0], int(port))})
+                    path_value=self.ftp_tree[" ".join(path)]={
+                        "type":type_,
+                        "ftps":[(addr[0], int(port))],
+                        "hash": self.sync.hash,
+                        "deleted":False
+                    }
+                case ["ADD_FTP_TO_PATH", port, *path]:
+                    self.ftp_tree[" ".join(path)]['ftps'].append((addr[0], int(port)))
 
                 case ["REMOVE_FROM_TREE", *path]:
                     try:
+                        path = " ".join(path)
                         print(">>>>>>",path)
-                        self.ftp_tree.pop(" ".join(path))
+                        self.ftp_tree[path]['deleted'] = True
+                        self.ftp_tree[path]['ftps'] = []
                     except (KeyError) as e:
                         # no problemo :D
                         logging.error(f"ERROR refreshing the tree (REMOVE_FROM_TREE) {e}")
                         pass
+                    except:
+                        logging.error("Error in Remove")
+                        
 
             #self.new_operations.put((node_id, request))
             #logging.info(f'new_operations:{self.new_operations.queue}')

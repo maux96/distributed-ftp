@@ -47,9 +47,9 @@ class Sinc:
                     #Si esto pasa lo ideal es que se conserven ambos archivos, esta pasando que hay dos archivos distintos o al menos creados por suredes distintas que poseen el mismo path
                     pass
 
-                for _,ftps in recieved_tree[dir]:
-                    for ftp in ftps:
-                        if ftp not in self.coordinator.ftp_tree[dir]['ftps']: #TODO Arreglar esto donde se crea el ftp_tree
+                for item in recieved_tree[dir]:
+                    for ftp in item['ftps']:
+                        if ftp not in self.coordinator.ftp_tree[dir]['ftps']:
                             #Si no esta un ftp asociado a este archivo que si esta otra red llamar este
                             self.coordinator.ftp_tree[dir]['ftps'].append(ftp)
                             merge = True
