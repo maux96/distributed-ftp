@@ -34,7 +34,7 @@ class FTPConfiguration(TypedDict):
 
 class FTP:
     TOTAL_THREADS = 10
-    TREE_REFRESH_TIME= 10
+    TREE_REFRESH_TIME= 5 
     def __init__(self, config: FTPConfiguration) -> None:
         self.id = config['id']
         self.host = config['host']
@@ -66,8 +66,9 @@ class FTP:
     def get_file_system(self):
         sol = []
         for route, files, folders in os.walk(self.root_path):
-            sol+=['/'+f for f in files]+ ['/'+ f for f in folders]
-        # print("#"*20,sol)
+            abs_rute= '/'+route[len(self.root_path):].strip('/') +'/'
+            sol+=[abs_rute+ f.strip('/') for f in folders] + [abs_rute+f.strip('/') for f in files]
+        print("#"*20,sol)
         return sol
 
 
@@ -122,6 +123,7 @@ class FTP:
             match operation:
                 case ['STOR' | 'MKD' as type_, path]:
                     type_ ='folder' if type_=='MKD' else 'file'
+                    print(")))))))))))))))))))))))))))))))",operation)
                     self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {path}")
                     
                 case ['DELE' | 'RMD',path]:
@@ -130,7 +132,7 @@ class FTP:
                 case ['RENAME',from_path, to_path]:
 
                     type_ = 'folder' if  self.is_folder(to_path) else 'file' 
-
+                    print("!!!!!!!!!!!!!!!!!!!!1<><><><>>>>>>>>",from_path, to_path, type_)
                     self.send_to_coords(f"REMOVE_FROM_TREE {from_path}")
                     self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {to_path}")
 
@@ -151,9 +153,11 @@ class FTP:
                 tree=json.loads(serialized_json)
 
                 
+                file_sys =  self.get_file_system()
+                print(file_sys)
                 for path, ftps in tree.items():
-                    print(path,"||||||", self.get_file_system())
                     if path not in self.get_file_system():
+                        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!NO EXISTEEEE", path)
                         # TODO verificar que el ftp seleccionado esta disponible
                         ftp_to_copy_from = ftps[random.randint(0,len(ftps)-1)]
                         
@@ -171,7 +175,7 @@ class FTP:
                             remote_operations.create_folder((self.host, self.port),path)
                             print('ENTROOO CARPETAAAAA!!!')
 
-                for path in self.get_file_system():
+                for path in file_sys:
                     if path not in tree.keys():
                         print(tree.keys())
 

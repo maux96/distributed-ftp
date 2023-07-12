@@ -4,6 +4,7 @@ from ..context import Context
 
 import pathlib
 import subprocess
+import shutil
 
 
 class LISTCommand(BaseCommand):
@@ -203,7 +204,9 @@ class RNTOCommand(BaseCommand):
                 # TODO verificar de alguna manera, que el archivo al cual se cambio el nombre
                 # este' replicado con anterioridad....
 
-                context.reneme_from.rename(context.get_os_absolute_path(new_name)) 
+                #context.reneme_from.rename(context.get_os_absolute_path(new_name)) 
+                shutil.move(context.reneme_from, context.get_os_absolute_path(new_name))
+
                 context.send_control_response(250, 'Requested file action okay, completed.')
 
                 if context.user != 'admin':
