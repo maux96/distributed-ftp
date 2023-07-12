@@ -318,7 +318,7 @@ class Bully:
             if self.leader:
 
                 for host, port in self.leaders_group:
-                    pin = self.ping(self.leader_host)
+                    pin = self.ping(host)
                     if host != self.coordinator.host and not pin[0]:
                         self.leaders_group.remove((host, port))
 

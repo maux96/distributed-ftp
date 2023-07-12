@@ -106,7 +106,7 @@ class FTP:
                 c_soc.settimeout(3)
                 with c_soc:
                     try:
-                        soc.send(f"{self.id} {message}".encode())
+                        c_soc.send(f"{self.id} {message}".encode())
                     except TimeoutError:
                         logging.debug("Failed to send to co-coordinator the operation!")
                         pass

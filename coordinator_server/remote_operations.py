@@ -28,10 +28,11 @@ def ftp_to_ftp_copy(emiter_addr, replication_addr, file_path1: str | Path, file_
     # open data port (PASV) with 1
     s1.send(b'PASV')
     control_response1=s1.recv(2048).decode('ascii')
-
     direction= re.search(r'\(.*\)',control_response1)
     if direction is None:
-        raise Exception("Problem with call to PASV")
+        print("#### VALUE OF PASV MESSAGE:", control_response1,"||",direction,"||",file_path1,"||",file_path2)
+        #raise Exception("Problem with call to PASV")
+        return False, -1, 'PASV'
     direction = direction.group()[1:-1]
 
 

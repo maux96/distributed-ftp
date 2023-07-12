@@ -3,7 +3,7 @@ import json
 import random
 
 def create_random_hash():
-    return random.randint(5_000, 1_000_000_000)
+    return str(random.randint(5_000, 1_000_000_000))
 
 class Sinc:
     def __init__(self, coordinator, bully, host):
@@ -72,7 +72,7 @@ class Sinc:
             pass
 
     def sinc_with_leader(self, buffer):
-        info = json.loads(buffer.decode())
+        info = json.loads(buffer)
         recieved_tree = info['tree']
         
         #cuando se sincroniza con el lider hereda su hash
@@ -80,5 +80,5 @@ class Sinc:
 
         #como se esta coordinando con el lider nos interesa que tome exactamente lo que tiene el lider, luego se limpia el tree de este coordinador y se replica exactamente igual al del lider. En caso que se tenga informacion relevante, se controla a nivel de secronizar desde el lider.
         self.coordinator.ftp_tree = {}
-        for dir in recieved_tree.keys():
-            self.coordinator.ftp_tree[dir] = recieved_tree.value()    
+        for key,values in recieved_tree.items():
+            self.coordinator.ftp_tree[key] = values
