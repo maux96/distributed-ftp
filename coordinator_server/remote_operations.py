@@ -177,4 +177,6 @@ def create_route_in_addr(addr: tuple[str, int],route: str):
     return True, 0, None
 
 
-
+def create_path_and_replicate(emiter_addr, replication_addr, file_path1: str | Path, file_path2: str | Path):
+    create_route_in_addr(replication_addr,'/'.join(str(file_path2).split('/')[:-1]))
+    return ftp_to_ftp_copy(emiter_addr,replication_addr,file_path1, file_path2)

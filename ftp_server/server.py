@@ -63,14 +63,22 @@ class FTP:
     def set_coordinator(self, coordinator_dir):
         self.current_coordinator = coordinator_dir 
 
-    def get_file_system(self):
-        sol = []
-        for route, files, folders in os.walk(self.root_path):
-            abs_rute= '/'+route[len(self.root_path):].strip('/') +'/'
-            sol+=[abs_rute+ f.strip('/') for f in folders] + [abs_rute+f.strip('/') for f in files]
-        print("#"*20,sol)
-        return sol
+    # def get_file_system(self):
+    #     sol = []
+    #     for route, files, folders in os.walk(self.root_path):
+    #         abs_rute= '/'+route[len(self.root_path):].strip('/') +'/'
+    #         sol+=[abs_rute+ f.strip('/') for f in folders] + [abs_rute+f.strip('/') for f in files]
+    #     print("#"*20,sol)
+    #     return sol
+    def get_file_system(self,path_to_walk=None):
+        if path_to_walk is None:
+            path_to_walk=self.root_path
 
+        sol = []
+        for route, files, folders in os.walk(path_to_walk):
+            sol+=[route[len(self.root_path):]+'/'+f for f in files]+ [route[len(self.root_path):]+'/'+ f for f in folders]
+        # print("#"*20,sol)
+        return sol
 
     def send_to_coords(self, message: str):
 
@@ -123,7 +131,7 @@ class FTP:
             match operation:
                 case ['STOR' | 'MKD' as type_, path]:
                     type_ ='folder' if type_=='MKD' else 'file'
-                    print(")))))))))))))))))))))))))))))))",operation)
+                    # print(")))))))))))))))))))))))))))))))",operation)
                     self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {path}")
                     
                 case ['DELE' | 'RMD',path]:
@@ -132,9 +140,18 @@ class FTP:
                 case ['RENAME',from_path, to_path]:
 
                     type_ = 'folder' if  self.is_folder(to_path) else 'file' 
-                    print("!!!!!!!!!!!!!!!!!!!!1<><><><>>>>>>>>",from_path, to_path, type_)
-                    self.send_to_coords(f"REMOVE_FROM_TREE {from_path}")
+                    # print("!!!!!!!!!!!!!!!!!!!!1<><><><>>>>>>>>",from_path, to_path, type_)
+
+                    folder_contents=self.get_file_system(self.root_path+to_path)
+                    print ("_______________Folder Content__________", folder_contents)
+                    for cont in folder_contents:
+                        self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {cont}")                    
+                        self.send_to_coords(f"REMOVE_FROM_TREE {cont[len(to_path)-len(from_path):]}")
+                        print("**************************DELETE******************************", cont[len(to_path)-len(from_path):])
+
+                    self.send_to_coords(f"REMOVE_FROM_TREE {from_path}")                    
                     self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {to_path}")
+
 
             self.write_operations.get()
               
@@ -154,18 +171,17 @@ class FTP:
 
                 
                 file_sys =  self.get_file_system()
-                print(file_sys)
+                # print(file_sys)
                 for path, ftps in tree.items():
                     if path not in self.get_file_system():
-                        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!NO EXISTEEEE", path)
+                        # print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!NO EXISTEEEE", path)
                         # TODO verificar que el ftp seleccionado esta disponible
                         ftp_to_copy_from = ftps[random.randint(0,len(ftps)-1)]
                         
                         is_folder = ftp_to_copy_from['type'] == 'folder'
-                        print(f"{path}: Is Folder ????????????????????????? ", is_folder)
 
                         if not is_folder:
-                            remote_operations.ftp_to_ftp_copy(
+                            remote_operations.create_path_and_replicate(
                                 tuple(ftp_to_copy_from['addr']),
                                 (self.host, self.port),
                                 path,
@@ -173,7 +189,6 @@ class FTP:
 
                         else:
                             remote_operations.create_folder((self.host, self.port),path)
-                            print('ENTROOO CARPETAAAAA!!!')
 
                 for path in file_sys:
                     if path not in tree.keys():

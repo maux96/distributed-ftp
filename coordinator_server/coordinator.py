@@ -136,7 +136,7 @@ class Coordinator:
                                 host=ftp_addr[0],
                                 port=ftp_addr[1],
                                 last_operations_id={})
-                            for hash in self.bully_protocol.sinc.logs_dict:
+                            """ for hash in self.bully_protocol.sinc.logs_dict:
                                 s.send(f"LASTFROMHASH {hash}".encode('ascii'))
                                 response=s.recv(512).decode().split()
                                 _resp_code,last_operation,*_=response
@@ -145,7 +145,7 @@ class Coordinator:
                                 current_ftp['last_operations_id'][hash] = last_operation
                                 self._add_operations_to_do(last_operation_in_ftp=last_operation,
                                                            hash=hash,
-                                                           ftp_name=name)
+                                                           ftp_name=name) """
 
                             valid_ftp[name] =  current_ftp
 
@@ -168,10 +168,10 @@ class Coordinator:
         self.available_ftp = valid_ftp 
         logging.debug(f"Current available FTPs:{utils.last_ftp_operations(valid_ftp)}")
 
-    def _add_operations_to_do(self, last_operation_in_ftp: int, hash: int ,ftp_name: str):
-        for index in range(last_operation_in_ftp,
-                           len(self.bully_protocol.sinc.logs_dict.setdefault(hash,[]))):
-            self.operations_to_do.put((index, hash, ftp_name))
+    # def _add_operations_to_do(self, last_operation_in_ftp: int, hash: int ,ftp_name: str):
+    #     for index in range(last_operation_in_ftp,
+    #                        len(self.bully_protocol.sinc.logs_dict.setdefault(hash,[]))):
+    #         self.operations_to_do.put((index, hash, ftp_name))
         
     def _refresh_loop(self,func: Callable, wait_time: int):
         while True:
