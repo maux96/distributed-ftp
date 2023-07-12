@@ -204,14 +204,15 @@ class RNTOCommand(BaseCommand):
                 # TODO verificar de alguna manera, que el archivo al cual se cambio el nombre
                 # este' replicado con anterioridad....
 
-                #context.reneme_from.rename(context.get_os_absolute_path(new_name)) 
+                #context.reneme_from.rename(context.get_os_absolute_path(new_name))
+                is_dir=pathlib.Path(context.reneme_from).is_dir() 
                 shutil.move(context.reneme_from, context.get_os_absolute_path(new_name))
 
                 context.send_control_response(250, 'Requested file action okay, completed.')
 
                 if context.user != 'admin':
                     context.save_write_op('RENAME',
-                        [context.get_absolute_path_from_os_path(context.reneme_from), context.get_absolute_path(new_name)]) 
+                        [is_dir,context.get_absolute_path_from_os_path(context.reneme_from), context.get_absolute_path(new_name)]) 
             except:
                 context.send_control_response(553, 'Requested action not taken.')
             finally:

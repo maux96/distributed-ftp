@@ -137,20 +137,20 @@ class FTP:
                 case ['DELE' | 'RMD',path]:
                     self.send_to_coords(f"REMOVE_FROM_TREE {path}")
 
-                case ['RENAME',from_path, to_path]:
+                case ['RENAME',is_dir, from_path, to_path]:
 
-                    type_ = 'folder' if  self.is_folder(to_path) else 'file' 
-                    # print("!!!!!!!!!!!!!!!!!!!!1<><><><>>>>>>>>",from_path, to_path, type_)
-
-                    folder_contents=self.get_file_system(self.root_path+to_path)
-                    print ("_______________Folder Content__________", folder_contents)
-                    for cont in folder_contents:
-                        self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {cont}")                    
-                        self.send_to_coords(f"REMOVE_FROM_TREE {cont[len(to_path)-len(from_path):]}")
-                        print("**************************DELETE******************************", cont[len(to_path)-len(from_path):])
+                    #type_ = 'folder' if  self.is_folder(to_path) else 'file' 
+                    if is_dir:    
+                        folder_contents=self.get_file_system(self.root_path+to_path)
+                        print ("_______________Folder sContent__________", folder_contents)
+                        for cont in folder_contents:
+                            type_ = 'folder' if  self.is_folder(cont) else 'file' 
+                            self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {cont}")                    
+                            self.send_to_coords(f"REMOVE_FROM_TREE {cont[len(to_path)-len(from_path):]}")
+                            print("**************************DELETE******************************", cont[len(to_path)-len(from_path):])
 
                     self.send_to_coords(f"REMOVE_FROM_TREE {from_path}")                    
-                    self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {to_path}")
+                    self.send_to_coords(f"ADD_TO_TREE {self.port} {'folder' if is_dir else 'file'} {to_path}")
 
 
             self.write_operations.get()

@@ -42,14 +42,14 @@ class Context:
 
     def save_write_op(self,
                       type_: Literal['STOR', 'MKD', 'DELE', 'RMD', 'RENAME'],
-                      args: list[str] ):
+                      args: list[str|bool] ):
 
         if type_ != 'RENAME': 
             path=self.get_absolute_path(args[0])
             self.save_write_operation([type_, path]) 
             return 
 
-        self.save_write_operation([type_, args[0], args[1]])
+        self.save_write_operation([type_, *args])
 
 
     def set_coordinator(self, port: int):
