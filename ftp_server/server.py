@@ -71,9 +71,42 @@ class FTP:
         return sol
 
     def is_folder(self, route: str):
-        p=pathlib.Path(self.root_path,route.strip('/')+'/')
+        p=f"/{self.root_path.strip('/')}/{route.strip('/')}"
         print("IS FOLDER?---",p)
-        return p.exists()  and p.is_dir()
+        return os.path.isdir(p) 
+
+    def send_to_coords(self, message: str):
+
+        # principal lider
+        if self.current_coordinator is not None:
+            soc=utils.connect_socket_to(*self.current_coordinator)
+            if soc is not None:
+                with soc:
+                    if soc is not None:
+                        soc.send(f"{self.id} {message}".encode())
+                        pass
+            else:
+                logging.error("Error opening a socket to send info to liders")
+                return
+        else: 
+            logging.error("No coordinator available!")
+            return
+
+
+        # co-liders
+        for addr in self.co_coordinators:
+            if  self.current_coordinator != addr and\
+                (c_soc:=utils.connect_socket_to(*addr)) and\
+                c_soc is not None:
+                c_soc.settimeout(3)
+                with c_soc:
+                    try:
+                        soc.send(f"{self.id} {message}".encode())
+                    except TimeoutError:
+                        logging.debug("Failed to send to co-coordinator the operation!")
+                        pass
+
+
 
     def operation_saver(self):
         while True:
@@ -87,34 +120,17 @@ class FTP:
                 continue             
             match operation:
                 case ['STOR' | 'MKD' as type_, *path]:
-                    soc=utils.connect_socket_to(*self.current_coordinator)
-                    if soc is not None:
-                        type_ ='folder' if type_=='MKD' else 'file'
-                        soc.send(f"{self.id} ADD_TO_TREE {self.port} {type_} {' '.join(path)}".encode())
-                        soc.close()
-                    else: 
-                        continue
+                    type_ ='folder' if type_=='MKD' else 'file'
+                    self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {' '.join(path)}")
                     
                 case ['DELE' | 'RMD',*path]:
-                    soc=utils.connect_socket_to(*self.current_coordinator)
-                    if soc is not None:
-                        soc.send(f"{self.id} REMOVE_FROM_TREE {' '.join(path)}".encode())
-                        soc.close()
-                    else: 
-                        logging.warning("Cant connect to coordinator!")
-                        continue
+                    self.send_to_coords(f"REMOVE_FROM_TREE {' '.join(path)}")
 
                 case ['RENAME', *args]:
                     from_path, to_path = re.findall(r"\'(.*?)\'",' '.join(args))
-                    soc=utils.connect_socket_to(*self.current_coordinator)
-                    
-                    if soc is not None:
-                        soc.send(f"{self.id} REMOVE_FROM_TREE {' '.join(from_path)}".encode())
-                        soc.send(f"{self.id} ADD_TO_TREE {' '.join(to_path)}".encode())
 
-                        soc.close()
-                    else: 
-                        continue
+                    self.send_to_coords(f"REMOVE_FROM_TREE {' '.join(from_path)}")
+                    self.send_to_coords(f"ADD_TO_TREE {' '.join(to_path)}")
 
             self.write_operations.get()
               
@@ -146,18 +162,14 @@ class FTP:
                                 path,
                                 path)
 
-                            remote_operations.create_folder((self.host, self.port),path)
                         else:
-                            print('ENTROOO CARPETAAAAA!!!')
-                            #remote_operations.create_folder((self.host, self.port),path)
+                            remote_operations.create_folder((self.host, self.port),path)
 
                 for path in self.get_file_system():
                     if path not in tree.keys():
-                        print("PATHHHH-----< ",path)
                         print(tree.keys())
 
                         if self.is_folder(path):
-                            print('ENTROOO CARPETAAAAA BORRAR!!!')
                             remote_operations.delete_folder((self.host, self.port),path)
                         else:
                             remote_operations.delete_file((self.host, self.port),path)
