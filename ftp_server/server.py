@@ -120,18 +120,19 @@ class FTP:
                 sleep(10)
                 continue             
             match operation:
-                case ['STOR' | 'MKD' as type_, *path]:
+                case ['STOR' | 'MKD' as type_, path]:
                     type_ ='folder' if type_=='MKD' else 'file'
-                    self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {' '.join(path)}")
+                    self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {path}")
                     
-                case ['DELE' | 'RMD',*path]:
-                    self.send_to_coords(f"REMOVE_FROM_TREE {' '.join(path)}")
+                case ['DELE' | 'RMD',path]:
+                    self.send_to_coords(f"REMOVE_FROM_TREE {path}")
 
-                case ['RENAME', *args]:
-                    from_path, to_path = re.findall(r"\'(.*?)\'",' '.join(args))
+                case ['RENAME',from_path, to_path]:
 
-                    self.send_to_coords(f"REMOVE_FROM_TREE {' '.join(from_path)}")
-                    self.send_to_coords(f"ADD_TO_TREE {' '.join(to_path)}")
+                    type_ = 'folder' if  self.is_folder(to_path) else 'file' 
+
+                    self.send_to_coords(f"REMOVE_FROM_TREE {from_path}")
+                    self.send_to_coords(f"ADD_TO_TREE {self.port} {type_} {to_path}")
 
             self.write_operations.get()
               
