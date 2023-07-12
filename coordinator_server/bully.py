@@ -75,6 +75,8 @@ class Bully:
             # return
         else:
             # Actualizar el hash porque se cayo un lider superior
+            self.sinc.update_hash()
+
             self.leader = True
             self.coordinator.accepting_connections = True
             self.leader_host = self.coordinator.host
