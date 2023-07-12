@@ -18,16 +18,40 @@ class Sinc:
 
     def get_sinc_from(self, buffer):
         recieved_tree = json.loads(buffer) ['tree']
+        merge = False
 
         for dir in recieved_tree.keys():
             if dir not in self.tree:
-                self.coordinator.ftp_tree[dir] = recieved_tree.value()    
+                self.coordinator.ftp_tree[dir] = recieved_tree[dir]
+                merge = True    
             else:
+                if recieved_tree[dir]['deleted'] and not self.coordinator.ftp_tree[dir]['deleted']:
+                    #Si se elimino el archivo en otra subred y no se elimino en esta 
+                    if recieved_tree[dir]['hash'] == self.coordinator.ftp_tree[dir]['hash']:
+                        #si el hash es el mismo, es decir es el mismo archivo dado que se crearon en la misma subred en cierto momento entonces esta direccion se debe 'eliminar'
+                        recieved_tree[dir]['deleted'] = True
+                        merge = True    
+                        #luego ya no tengo que volver a tratar con este archivo 
+                        continue
+
+                if  self.coordinator.ftp_tree[dir]['deleted'] and not recieved_tree[dir]['deleted']:
+                    # Si esta eliminada una ruta en esta subred y no lo esta en la otra, entonces hay que mantenerla o no eliminada segun lo que se hizo en la subred de la cual se esta sincronizando
+                    if recieved_tree[dir]['hash'] != self.coordinator.ftp_tree[dir]['hash']:
+                        # Si el hash es distinto entonces el momento de creacion de un archivo y otro fue distinto, luego no es el mismo archivo resultante de la subdivicion de la red, entonces me interesa la informacion del archivo nuevo que estoy sincornizando
+                        self.coordinator.ftp_tree[dir] = recieved_tree[dir]
+                        merge = True    
+                        #luego ya no tengo que volver a tratar con este archivo 
+                        continue
+
                 for _,ftps in recieved_tree[dir]:
                     for ftp in ftps:
-                        if ftp not in self.coordinator.ftp_tree[dir]['ftps']: #TODO Arreglar esto donde se crea el ft_tree
+                        if ftp not in self.coordinator.ftp_tree[dir]['ftps']: #TODO Arreglar esto donde se crea el ftp_tree
                             #Si no esta un ftp asociado a este archivo que si esta otra red llamar este
                             self.coordinator.ftp_tree[dir]['ftps'].append(ftp)
+                            merge = True
+                if merge:
+                    #Si hay merge hay que updatear el hash para evitar conflictos y trabajar sobre un hash nuevo
+                    self.update_hash()
 
         logging.info(str(self.coordinator.id) +
                      ": sync success: \n" + str(self.coordinator.ftp_tree))
