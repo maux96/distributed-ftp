@@ -43,6 +43,10 @@ class Sinc:
                         #luego ya no tengo que volver a tratar con este archivo 
                         continue
 
+                if self.coordinator.ftp_tree[dir]['hash'] == recieved_tree[dir]['hash']:
+                    #Si esto pasa lo ideal es que se conserven ambos archivos, esta pasando que hay dos archivos distintos o al menos creados por suredes distintas que poseen el mismo path
+                    pass
+
                 for _,ftps in recieved_tree[dir]:
                     for ftp in ftps:
                         if ftp not in self.coordinator.ftp_tree[dir]['ftps']: #TODO Arreglar esto donde se crea el ftp_tree
